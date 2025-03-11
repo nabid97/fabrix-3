@@ -1,197 +1,177 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
+import { FaBolt, FaShirt, FaRulerHorizontal, FaPalette } from 'react-icons/fa6';
 
-const HomePage = () => {
+const HomePage: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-teal-500 to-blue-500 py-20 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Welcome to <span className="text-yellow-300">FabriX</span>
-          </h1>
-          <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto">
-            Premium fabrics and custom clothing solutions for businesses
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              to="/clothing"
-              className="bg-white text-teal-600 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg"
-            >
-              Explore Clothing
-            </Link>
-            <Link
-              to="/fabrics"
-              className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-white hover:text-teal-600 transition-colors shadow-lg"
-            >
-              Browse Fabrics
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Mission Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-10 text-gray-800">Our Mission</h2>
-          <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-8">
-            <p className="text-lg text-gray-700 leading-relaxed">
-              At FabriX, we're committed to providing high-quality fabrics and custom clothing solutions
-              that help businesses create unique identities through textile. Our mission is to combine
-              innovation, sustainability, and exceptional craftsmanship to deliver products that exceed
-              our clients' expectations while minimizing environmental impact.
+    <>
+      <Helmet>
+        <title>FabriX - Premium Fabrics & Custom Clothing Solutions</title>
+        <meta name="description" content="FabriX offers premium fabrics and custom clothing solutions for businesses. From design to delivery, we handle all your fabric and clothing needs." />
+      </Helmet>
+      
+      {/* Hero Section with teal background */}
+      <section className="bg-teal-700 text-white py-16 sm:py-24 rounded-2xl overflow-hidden relative mb-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              Premium Fabrics & Custom Clothing Solutions
+            </h1>
+            <p className="text-lg sm:text-xl mb-8 text-teal-100">
+              From design to delivery, we handle all your fabric and clothing needs 
+              with quality materials and expert craftsmanship.
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Products */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-10 text-center text-gray-800">Featured Products</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Product Card 1 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-64 bg-gray-200">
-                <img
-                  src="/api/placeholder/400/320"
-                  alt="Cotton Fabric"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-2">Premium Cotton</h3>
-                <p className="text-gray-600 mb-4">
-                  High-quality, sustainable cotton for comfortable and durable clothing.
-                </p>
-                <Link
-                  to="/fabrics/cotton"
-                  className="text-teal-600 font-medium inline-flex items-center hover:text-teal-700"
-                >
-                  View Details <ArrowRight size={16} className="ml-1" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Product Card 2 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-64 bg-gray-200">
-                <img
-                  src="/api/placeholder/400/320"
-                  alt="Custom Polo Shirts"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-2">Custom Polo Shirts</h3>
-                <p className="text-gray-600 mb-4">
-                  Professional polo shirts with your logo, perfect for company uniforms.
-                </p>
-                <Link
-                  to="/clothing/polo-shirts"
-                  className="text-teal-600 font-medium inline-flex items-center hover:text-teal-700"
-                >
-                  View Details <ArrowRight size={16} className="ml-1" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Product Card 3 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-64 bg-gray-200">
-                <img
-                  src="/api/placeholder/400/320"
-                  alt="Logo Design Services"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-2">Logo Design</h3>
-                <p className="text-gray-600 mb-4">
-                  Create a custom logo for your brand with our AI-powered generator.
-                </p>
-                <Link
-                  to="/logo-generator"
-                  className="text-teal-600 font-medium inline-flex items-center hover:text-teal-700"
-                >
-                  Try Now <ArrowRight size={16} className="ml-1" />
-                </Link>
-              </div>
+            <div className="flex flex-wrap gap-4">
+              <Link to="/fabrics" className="px-8 py-3 bg-white text-teal-800 font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+                Explore Fabrics
+              </Link>
+              <Link to="/clothing" className="px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors">
+                View Clothing
+              </Link>
             </div>
           </div>
         </div>
       </section>
-
-      {/* Clients Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-10 text-center text-gray-800">Our Suppliers' Customers</h2>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            <div className="w-32 h-16 flex items-center justify-center grayscale hover:grayscale-0 transition-all">
-              <img src="/api/placeholder/120/60" alt="Primark" className="max-w-full max-h-full" />
-            </div>
-            <div className="w-32 h-16 flex items-center justify-center grayscale hover:grayscale-0 transition-all">
-              <img src="/api/placeholder/120/60" alt="H&M" className="max-w-full max-h-full" />
-            </div>
-            <div className="w-32 h-16 flex items-center justify-center grayscale hover:grayscale-0 transition-all">
-              <img src="/api/placeholder/120/60" alt="Zara" className="max-w-full max-h-full" />
-            </div>
-            <div className="w-32 h-16 flex items-center justify-center grayscale hover:grayscale-0 transition-all">
-              <img src="/api/placeholder/120/60" alt="Nike" className="max-w-full max-h-full" />
-            </div>
-            <div className="w-32 h-16 flex items-center justify-center grayscale hover:grayscale-0 transition-all">
-              <img src="/api/placeholder/120/60" alt="Adidas" className="max-w-full max-h-full" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* About Us Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-10 text-center text-gray-800">About Us</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-800">Our Story</h3>
-              <p className="text-gray-700 mb-6 leading-relaxed">
-                Founded in 2025, FabriX has grown from a small fabric supplier to a comprehensive 
-                textile solution provider serving businesses across the globe. Our journey started 
-                with a passion for quality fabrics and a vision to revolutionize how businesses 
-                approach their textile needs.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                Today, we're proud to offer not just premium fabrics, but also custom clothing 
-                production, logo design services, and end-to-end supply chain solutions for businesses 
-                of all sizes. Our commitment to sustainability and innovation drives everything we do.
+      
+      {/* Features Section with teal background */}
+      <section className="py-16 mb-12 bg-teal-700 text-white rounded-xl">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center mb-12">Why Choose FabriX</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="bg-teal-600 p-6 rounded-xl border border-teal-500 transition-colors">
+              <div className="bg-teal-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <FaPalette className="text-white text-xl" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Premium Quality</h3>
+              <p className="text-teal-100">
+                Handpicked fabrics from the finest mills around the world, ensuring superior quality.
               </p>
             </div>
-            <div className="bg-gray-200 rounded-xl overflow-hidden h-80">
-              <img
-                src="/api/placeholder/600/480"
-                alt="FabriX Team"
-                className="w-full h-full object-cover"
+            
+            <div className="bg-teal-600 p-6 rounded-xl border border-teal-500 transition-colors">
+              <div className="bg-teal-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <FaShirt className="text-white text-xl" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Custom Design</h3>
+              <p className="text-teal-100">
+                Professional design services to create unique clothing that represents your brand.
+              </p>
+            </div>
+            
+            <div className="bg-teal-600 p-6 rounded-xl border border-teal-500 transition-colors">
+              <div className="bg-teal-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <FaRulerHorizontal className="text-white text-xl" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Perfect Fit</h3>
+              <p className="text-teal-100">
+                Precise measurements and expert tailoring to ensure every garment fits perfectly.
+              </p>
+            </div>
+            
+            <div className="bg-teal-600 p-6 rounded-xl border border-teal-500 transition-colors">
+              <div className="bg-teal-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <FaBolt className="text-white text-xl" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Quick Turnaround</h3>
+              <p className="text-teal-100">
+                Efficient production process to deliver your orders on time, every time.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Categories Section with teal background */}
+      <section className="py-12 mb-12 bg-teal-700 text-white rounded-xl">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center mb-12">Our Categories</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Link to="/fabrics" className="group relative h-80 rounded-xl overflow-hidden">
+              <img 
+                src="https://fabrix-assets.s3.us-east-1.amazonaws.com/fabrics-category.jpg" 
+                alt="Fabrics" 
+                className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500"
               />
-            </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-6">
+                <h3 className="text-white text-2xl font-bold mb-2">Premium Fabrics</h3>
+                <p className="text-gray-200 mb-4">Discover our collection of high-quality fabrics</p>
+                <span className="inline-block px-4 py-2 bg-white text-teal-800 rounded-lg font-medium">
+                  Shop Now
+                </span>
+              </div>
+            </Link>
+            
+            <Link to="/clothing" className="group relative h-80 rounded-xl overflow-hidden">
+              <img 
+                src="https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing-category.jpg" 
+                alt="Clothing" 
+                className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-6">
+                <h3 className="text-white text-2xl font-bold mb-2">Custom Clothing</h3>
+                <p className="text-gray-200 mb-4">Tailored clothing solutions for your business</p>
+                <span className="inline-block px-4 py-2 bg-white text-teal-800 rounded-lg font-medium">
+                  Explore
+                </span>
+              </div>
+            </Link>
           </div>
         </div>
       </section>
-
-      {/* Call to Action */}
-      <section className="py-16 bg-teal-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to get started?</h2>
-          <p className="text-xl mb-10 max-w-3xl mx-auto">
-            Contact our team today to discuss your fabric and clothing needs.
-          </p>
-          <Link
-            to="/contact"
-            className="bg-white text-teal-600 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg inline-block"
-          >
-            Contact Us
-          </Link>
+      
+      {/* Testimonials with teal background */}
+      <section className="py-12 bg-teal-700 text-white rounded-2xl mb-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center mb-12">What Our Clients Say</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="bg-teal-600 p-6 rounded-xl border border-teal-500">
+                <div className="flex items-center mb-4">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg key={star} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                    </svg>
+                  ))}
+                </div>
+                
+                <blockquote className="text-teal-100 mb-4">
+                  "FabriX has been instrumental in helping us launch our clothing line. Their attention to detail and quality fabric selections exceeded our expectations."
+                </blockquote>
+                
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-teal-500 mr-3"></div>
+                  <div>
+                    <p className="font-medium">John Smith</p>
+                    <p className="text-sm text-teal-200">Fashion Brand Owner</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
-    </div>
+      
+      {/* CTA Section - already using teal-700 */}
+      <section className="py-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-teal-700 rounded-2xl p-8 md:p-12 flex flex-col md:flex-row md:items-center justify-between">
+            <div className="mb-6 md:mb-0 md:mr-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Ready to start your project?</h2>
+              <p className="text-teal-100 max-w-xl">
+                Contact our team today to discuss your fabric and clothing requirements.
+              </p>
+            </div>
+            <Link to="/contact" className="px-8 py-3 bg-white text-teal-800 font-semibold rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap">
+              Contact Us
+            </Link>
+          </div>
+        </div>
+      </section>
+    </>
   );
 };
 

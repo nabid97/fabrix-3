@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { Auth } from '../mocks/mockAuth';
+import { Auth } from 'aws-amplify';
 
 interface User {
   email: string;
@@ -61,24 +61,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      const userData = await Auth.signIn(email, password);
-      setIsAuthenticated(true);
-      setUser({
-        email: userData.attributes.email,
-        sub: userData.attributes.sub,
-        name: userData.attributes.name || userData.attributes.email.split('@')[0] || 'User', // Fallback
-      });
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+  // Inside your login method
+const login = async (email: string, password: string) => {
+  setLoading(true);
+  try {
+    const userData = await Auth.signIn(email, password);
+    setIsAuthenticated(true);
+    setUser({
+      email: userData.attributes.email,
+      sub: userData.attributes.sub,
+      name: userData.attributes.name || userData.attributes.email.split('@')[0] || 'User',
+    });
+  } catch (error: unknown) {
+    console.error('Login error:', error);
+    // More detailed error handling
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      if (error.code === 'UserNotFoundException') {
+        throw new Error('User not found. Please check your email address or sign up.');
+      } else if (error.code === 'NotAuthorizedException') {
+        throw new Error('Incorrect email or password. Please try again.');
+      } else if (error.code === 'UserNotConfirmedException') {
+        throw new Error('Please confirm your account by clicking the link in the verification email.');
+      }
     }
-  };
-
+    // Re-throw the error if it doesn't match our known error types
+    throw error;
+  } finally {
+    setLoading(false);
+  }
+};
   const register = async (email: string, password: string, name: string) => {
     setLoading(true);
     try {

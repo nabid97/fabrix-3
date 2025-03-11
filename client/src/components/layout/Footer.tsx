@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, MapPin, Phone, Mail } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -11,7 +11,8 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-xl font-bold mb-4">FabriX</h3>
             <p className="text-gray-400 mb-4">
-              Your one-stop shop for premium fabrics and customized clothing for businesses.
+              Premium fabrics and custom clothing solutions for businesses. From design to delivery, 
+              we handle all your fabric and clothing needs.
             </p>
             <div className="flex space-x-4">
               <a
@@ -81,9 +82,9 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Customer Support */}
+          {/* Customer Service */}
           <div>
-            <h3 className="text-xl font-bold mb-4">Customer Support</h3>
+            <h3 className="text-xl font-bold mb-4">Customer Service</h3>
             <ul className="space-y-2">
               <li>
                 <Link to="/faq" className="text-gray-400 hover:text-white transition-colors">
@@ -121,7 +122,7 @@ const Footer: React.FC = () => {
                 <MapPin size={20} className="text-gray-400 mr-2 mt-1" />
                 <span className="text-gray-400">
                   123 Fabric Street, Suite 100<br />
-                  Textile City, TX 75001
+                  Textile City, TC 12345
                 </span>
               </li>
               <li className="flex items-center">
@@ -142,14 +143,8 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p>© {new Date().getFullYear()} FabriX. All rights reserved.</p>
-            <div className="mt-4 md:mt-0">
-              <span>Our Suppliers' Customers: </span>
-              <span className="font-medium">Primark, H&M, Zara, and more</span>
-            </div>
-          </div>
+        <div className="border-t border-gray-700 mt-12 pt-8 text-center text-gray-400">
+          <p>© {new Date().getFullYear()} FabriX. All rights reserved.</p>
         </div>
       </div>
     </footer>

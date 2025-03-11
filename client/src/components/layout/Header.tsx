@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Search, Menu, X, User, Heart, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
+import { Menu, X, ShoppingBag, User, Search, ChevronDown } from 'lucide-react';
 
-const Header = () => {
+const Header: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
+  const { itemCount } = useCart();
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [cartCount] = useState(3);
   const [isScrolled, setIsScrolled] = useState(false);
   
   // Categories dropdown state
@@ -37,17 +42,17 @@ const Header = () => {
   }, []);
 
   return (
-    <header className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-white/90 backdrop-blur-sm py-4'}`}>
+    <header className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-white py-4'}`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <a href="/" className="text-2xl font-bold text-teal-600">FabriX</a>
+            <Link to="/" className="text-2xl font-bold text-teal-600">FabriX</Link>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
-            <a href="/" className="text-gray-700 hover:text-teal-600 font-medium">Home</a>
+            <Link to="/" className="text-gray-700 hover:text-teal-600 font-medium">Home</Link>
             
             {/* Categories dropdown */}
             <div className="relative group">
@@ -66,24 +71,20 @@ const Header = () => {
                 onMouseEnter={() => setCategoriesOpen(true)}
                 onMouseLeave={() => setCategoriesOpen(false)}
               >
-                <a href="/clothing" className="block px-4 py-2 text-gray-700 hover:bg-teal-50 hover:text-teal-600">
+                <Link to="/clothing" className="block px-4 py-2 text-gray-700 hover:bg-teal-50 hover:text-teal-600">
                   Clothing
-                </a>
-                <a href="/fabrics" className="block px-4 py-2 text-gray-700 hover:bg-teal-50 hover:text-teal-600">
+                </Link>
+                <Link to="/fabrics" className="block px-4 py-2 text-gray-700 hover:bg-teal-50 hover:text-teal-600">
                   Fabrics
-                </a>
-                <a href="/accessories" className="block px-4 py-2 text-gray-700 hover:bg-teal-50 hover:text-teal-600">
-                  Accessories
-                </a>
-                <a href="/logo-generator" className="block px-4 py-2 text-gray-700 hover:bg-teal-50 hover:text-teal-600">
+                </Link>
+                <Link to="/logo-generator" className="block px-4 py-2 text-gray-700 hover:bg-teal-50 hover:text-teal-600">
                   Logo Generator
-                </a>
+                </Link>
               </div>
             </div>
             
-            <a href="/new-arrivals" className="text-gray-700 hover:text-teal-600 font-medium">New Arrivals</a>
-            <a href="/sales" className="text-gray-700 hover:text-teal-600 font-medium">Sale</a>
-            <a href="/contact" className="text-gray-700 hover:text-teal-600 font-medium">Contact</a>
+            <Link to="/contact" className="text-gray-700 hover:text-teal-600 font-medium">Contact</Link>
+            <Link to="/faq" className="text-gray-700 hover:text-teal-600 font-medium">FAQ</Link>
           </nav>
 
           {/* Actions */}
@@ -97,25 +98,28 @@ const Header = () => {
               <Search size={20} />
             </button>
             
-            {/* Wishlist - Desktop only */}
-            <a href="/wishlist" className="hidden sm:block text-gray-700 hover:text-teal-600">
-              <Heart size={20} />
-            </a>
-            
-            {/* User Account - Desktop only */}
-            <a href="/account" className="hidden sm:block text-gray-700 hover:text-teal-600">
-              <User size={20} />
-            </a>
+            {/* User Account */}
+            {isAuthenticated ? (
+              <Link to="/account" className="hidden sm:flex text-gray-700 hover:text-teal-600 items-center space-x-1">
+                <User size={20} />
+                <span className="text-sm">{user?.name || 'Account'}</span>
+              </Link>
+            ) : (
+              <Link to="/login" className="hidden sm:flex text-gray-700 hover:text-teal-600 items-center space-x-1">
+                <User size={20} />
+                <span className="text-sm">Sign In</span>
+              </Link>
+            )}
             
             {/* Cart */}
-            <a href="/cart" className="text-gray-700 hover:text-teal-600 relative">
+            <Link to="/cart" className="text-gray-700 hover:text-teal-600 relative">
               <ShoppingBag size={20} />
-              {cartCount > 0 && (
+              {itemCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-teal-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartCount}
+                  {itemCount}
                 </span>
               )}
-            </a>
+            </Link>
             
             {/* Mobile Menu Toggle */}
             <button 
@@ -143,7 +147,7 @@ const Header = () => {
         </div>
       </div>
       
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       <div 
         className={`fixed inset-0 bg-gray-900 bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${
           mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -151,6 +155,7 @@ const Header = () => {
         onClick={() => setMobileMenuOpen(false)}
       />
       
+      {/* Mobile Menu Sidebar */}
       <div 
         className={`fixed top-0 right-0 w-4/5 max-w-sm h-full bg-white z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
@@ -168,33 +173,34 @@ const Header = () => {
         </div>
         
         <nav className="px-4 py-6 space-y-6">
-          <a href="/" className="block text-lg font-medium">Home</a>
+          <Link to="/" className="block text-lg font-medium">Home</Link>
           
           <div className="space-y-4">
             <p className="font-bold text-gray-700">Categories</p>
-            <a href="/clothing" className="block ml-4 text-gray-600 hover:text-teal-600">Clothing</a>
-            <a href="/fabrics" className="block ml-4 text-gray-600 hover:text-teal-600">Fabrics</a>
-            <a href="/accessories" className="block ml-4 text-gray-600 hover:text-teal-600">Accessories</a>
-            <a href="/logo-generator" className="block ml-4 text-gray-600 hover:text-teal-600">Logo Generator</a>
+            <Link to="/clothing" className="block ml-4 text-gray-600 hover:text-teal-600">Clothing</Link>
+            <Link to="/fabrics" className="block ml-4 text-gray-600 hover:text-teal-600">Fabrics</Link>
+            <Link to="/logo-generator" className="block ml-4 text-gray-600 hover:text-teal-600">Logo Generator</Link>
           </div>
           
-          <a href="/new-arrivals" className="block text-lg font-medium">New Arrivals</a>
-          <a href="/sales" className="block text-lg font-medium">Sale</a>
-          <a href="/contact" className="block text-lg font-medium">Contact</a>
+          <Link to="/contact" className="block text-lg font-medium">Contact</Link>
+          <Link to="/faq" className="block text-lg font-medium">FAQ</Link>
           
           <div className="pt-6 mt-6 border-t border-gray-200">
-            <a href="/account" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
-              <User size={20} className="mr-2" />
-              My Account
-            </a>
-            <a href="/wishlist" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
-              <Heart size={20} className="mr-2" />
-              Wishlist
-            </a>
-            <a href="/cart" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
+            {isAuthenticated ? (
+              <Link to="/account" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
+                <User size={20} className="mr-2" />
+                My Account
+              </Link>
+            ) : (
+              <Link to="/login" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
+                <User size={20} className="mr-2" />
+                Sign In
+              </Link>
+            )}
+            <Link to="/cart" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
               <ShoppingBag size={20} className="mr-2" />
-              Cart ({cartCount})
-            </a>
+              Cart ({itemCount})
+            </Link>
           </div>
         </nav>
       </div>

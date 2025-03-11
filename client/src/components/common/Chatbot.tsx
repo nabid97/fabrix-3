@@ -1,13 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useChatbot } from '../../contexts/ChatbotContext';
-import { Send, X, MessageCircle } from 'lucide-react';
+import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
+import { IoClose } from 'react-icons/io5';
+import { IoPaperPlaneOutline, IoRefreshOutline } from 'react-icons/io5';
 
-const Chatbot = () => {
+const Chatbot: React.FC = () => {
   const { messages, isOpen, isLoading, sendMessage, toggleChatbot, resetChat } = useChatbot();
-  const [input, setInput] = useState('');
+  const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // Scroll to bottom of messages when new messages are added
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -17,86 +19,75 @@ const Chatbot = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
-      sendMessage(input);
-      setInput('');
+    if (inputMessage.trim()) {
+      sendMessage(inputMessage);
+      setInputMessage('');
     }
+  };
+
+  const renderMessages = () => {
+    return messages.map((message) => (
+      <div
+        key={message.id}
+        className={`mb-4 ${
+          message.sender === 'user'
+            ? 'ml-auto bg-teal-600 text-white'
+            : 'mr-auto bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white'
+        } rounded-lg px-4 py-3 max-w-[80%] shadow-md`}
+      >
+        {message.text}
+      </div>
+    ));
   };
 
   if (!isOpen) {
     return (
       <button
         onClick={toggleChatbot}
-        className="fixed bottom-6 right-6 bg-teal-600 text-white rounded-full p-4 shadow-lg hover:bg-teal-700 transition-colors z-50"
+        className="fixed bottom-6 right-6 bg-teal-600 text-white rounded-full p-4 shadow-xl hover:bg-teal-700 transition-all duration-300 z-50 flex items-center justify-center"
         aria-label="Open chat"
       >
-        <MessageCircle size={24} />
+        <IoChatbubbleEllipsesOutline size={24} />
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-80 sm:w-96 h-96 bg-white rounded-lg shadow-xl flex flex-col overflow-hidden z-50 border border-gray-200">
+    <div className="fixed bottom-6 right-6 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-[500px] border border-gray-200 dark:border-gray-700">
       {/* Header */}
-      <div className="bg-teal-600 text-white p-4 flex justify-between items-center">
-        <h3 className="font-medium">FabriX Assistant</h3>
-        <div className="flex items-center space-x-2">
+      <div className="bg-teal-600 text-white px-5 py-4 flex justify-between items-center">
+        <div className="flex items-center">
+          <IoChatbubbleEllipsesOutline className="mr-3" size={20} />
+          <h3 className="font-semibold text-lg">FabriX Assistant</h3>
+        </div>
+        <div className="flex items-center space-x-3">
           <button
             onClick={resetChat}
             className="text-white hover:text-gray-200 transition-colors"
             aria-label="Reset chat"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-              <path d="M3 21v-5h5" />
-            </svg>
+            <IoRefreshOutline size={20} />
           </button>
           <button
             onClick={toggleChatbot}
             className="text-white hover:text-gray-200 transition-colors"
             aria-label="Close chat"
           >
-            <X size={18} />
+            <IoClose size={20} />
           </button>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`mb-3 ${
-              message.sender === 'user' ? 'text-right' : 'text-left'
-            }`}
-          >
-            <div
-              className={`inline-block rounded-lg px-4 py-2 max-w-[85%] ${
-                message.sender === 'user'
-                  ? 'bg-teal-600 text-white'
-                  : 'bg-white text-gray-800 border border-gray-200'
-              }`}
-            >
-              <p className="whitespace-pre-wrap break-words">{message.text}</p>
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {message.timestamp.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </div>
-          </div>
-        ))}
+      <div className="flex-1 p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 space-y-4">
+        {renderMessages()}
+
         {isLoading && (
-          <div className="text-left mb-3">
-            <div className="inline-block rounded-lg px-4 py-2 bg-white text-gray-800 border border-gray-200">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-              </div>
+          <div className="flex justify-center py-3">
+            <div className="flex space-x-2">
+              <div className="w-3 h-3 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-3 h-3 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-3 h-3 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
             </div>
           </div>
         )}
@@ -104,29 +95,27 @@ const Chatbot = () => {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-3 border-t border-gray-200 bg-white">
-        <div className="flex">
+      <form onSubmit={handleSubmit} className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+        <div className="flex rounded-lg border-2 border-gray-300 dark:border-gray-600 overflow-hidden focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-transparent transition-all">
           <input
             type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Type your message..."
-            className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="flex-1 px-4 py-3 bg-white dark:bg-gray-800 focus:outline-none"
             disabled={isLoading}
           />
           <button
             type="submit"
-            className={`bg-teal-600 text-white px-4 rounded-r-lg hover:bg-teal-700 transition-colors flex items-center justify-center ${
-              isLoading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            disabled={isLoading}
+            disabled={!inputMessage.trim() || isLoading}
+            className="bg-teal-600 text-white px-4 py-3 hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:bg-teal-600"
           >
-            <Send size={18} />
+            <IoPaperPlaneOutline size={18} />
           </button>
         </div>
-        <div className="mt-2 text-center text-xs text-gray-500">
+        <div className="mt-3 text-center text-sm text-gray-500">
           <span>Need more help? </span>
-          <Link to="/contact" className="text-teal-600 hover:underline">
+          <Link to="/contact" className="text-teal-600 hover:underline font-medium">
             Contact us
           </Link>
         </div>
