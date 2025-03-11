@@ -99,14 +99,20 @@ export const ChatbotProvider = ({ children }: ChatbotProviderProps) => {
     ]);
   };
 
-  const value = {
-    messages,
-    isOpen,
-    isLoading,
-    sendMessage,
-    toggleChatbot,
-    resetChat,
-  };
-
-  return <ChatbotContext.Provider value={value}>{children}</ChatbotContext.Provider>;
+  return (
+    <ChatbotContext.Provider
+      value={{
+        messages,
+        isOpen,
+        isLoading,
+        sendMessage,
+        toggleChatbot,
+        resetChat,
+      }}
+    >
+      {children}
+    </ChatbotContext.Provider>
+  );
 };
+
+export default ChatbotContext;

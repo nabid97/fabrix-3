@@ -1,18 +1,20 @@
 import React from 'react';
-import './index.css';
 import ReactDOM from 'react-dom/client';
-import configureAmplify from './config/amplifyConfig';
+import './index.css';
 import App from './App';
+import configureAmplify from './config/amplifyConfig';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
-// Call the configuration function to set up Amplify
+// Initialize Amplify BEFORE rendering anything
 configureAmplify();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
-
 root.render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

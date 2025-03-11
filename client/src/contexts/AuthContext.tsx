@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { Auth } from 'aws-amplify';
+import { Auth } from '../mocks/mockAuth';
 
 interface User {
   email: string;
@@ -145,4 +145,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// Remove or comment out this line if you're using the named export
+// export default AuthContext;
+
+// Or keep this line if you want to export both:
 export default AuthContext;

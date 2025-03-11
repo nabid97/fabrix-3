@@ -8,7 +8,6 @@ import Footer from './components/layout/Footer';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Chatbot from './components/common/Chatbot';
 import { HelmetProvider } from 'react-helmet-async';
-import TestComponent from './TestComponent'; // Import the TestComponent
 
 
 // Lazy-loaded page components
@@ -39,8 +38,7 @@ function App() {
                 {/* No props needed as Header now uses the AuthContext internally */}
                 <Header />
                 
-                {/* Add TestComponent here, before your main routes */}
-                <TestComponent />
+                
                 
                 <main className="flex-grow">
                   <Suspense fallback={<LoadingSpinner />}>
