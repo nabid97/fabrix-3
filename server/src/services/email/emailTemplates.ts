@@ -1,15 +1,75 @@
+
+
+import { transporter } from '../../config/email';
+import config from '../../config';
+
 /**
  * Email template loading utility
  */
 
 // Template types
 type TemplateType = 'orderConfirmation' | 'shippingConfirmation' | 'contactForm';
-
+/**
+ * Send contact form confirmation email
+ * @param name - Customer name
+ * @param email - Customer email
+ * @param subject - Contact form subject
+ * @param message - Contact form message
+ */
+export const sendContactFormConfirmation = async (
+  name: string,
+  email: string,
+  subject: string,
+  message: string
+): Promise<void> => {
+  try {
+    // Load template and replace placeholders
+    const template = loadEmailTemplate('contactForm');
+    const date = new Date().toLocaleDateString();
+    
+    // Replace placeholders in template
+    const html = template
+      .replace('{{name}}', name)
+      .replace('{{date}}', date)
+      .replace('{{subject}}', subject)
+      .replace('{{message}}', message);
+    
+    // Send confirmation to customer
+    await transporter.sendMail({
+      from: `"FabriX Support" <${config.email.from}>`,
+      to: email,
+      subject: 'We received your message',
+      html,
+      text: `Thank you for contacting us! We've received your message and will get back to you soon.`,
+    });
+    
+    // Send notification to admin
+    await transporter.sendMail({
+      from: `"FabriX Website" <${config.email.from}>`,
+      to: config.email.from,
+      subject: `New Contact Form Submission: ${subject}`,
+      html: `
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+      `,
+      text: `New contact form submission from ${name} (${email}): ${message}`,
+    });
+    
+    console.log(`Contact form confirmation email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending contact form confirmation email:', error);
+    throw error;
+  }
+};
 /**
  * Load email template HTML
  * @param templateName - Name of the template to load
  * @returns Template HTML as string
  */
+
 export const loadEmailTemplate = (templateName: TemplateType): string => {
   // In a production environment, these would be loaded from actual HTML files
   // For simplicity, we're defining them inline here

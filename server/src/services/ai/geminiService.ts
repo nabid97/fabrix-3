@@ -63,31 +63,35 @@ export const generateGeminiResponse = async (
       suggest contacting customer service at info@fabrix.com or +1 (555) 123-4567.
     `;
 
-    // Start a chat session
+    // Format the history with system prompt included at the beginning
+    const formattedMessages = [
+      { role: 'model', parts: [{ text: systemPrompt }] },
+      ...formatMessagesForGemini(messages)
+    ];
+
+    // Use the chat method updated for the newer Gemini API structure
     const chat = model.startChat({
-      history: formatMessagesForGemini(messages.slice(0, -1)), // Exclude latest message from history
+      history: formattedMessages.slice(0, -1), // All but the latest message
     });
 
     // Get the latest user message
-    const latestMessage = messages[messages.length - 1];
-    const enhancedPrompt = `${systemPrompt}\n\nUser question: ${latestMessage.parts[0].text}`;
-
-    // Generate response
-    const result = await chat.sendMessage(enhancedPrompt);
-
-    // Extract response text safely
-    const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || "I'm not sure how to respond.";
-
-    // Extract safety ratings safely
-    const safetyRatings = result.response.candidates?.[0]?.safetyRatings || [];
+    const latestMessage = formattedMessages[formattedMessages.length - 1];
+    
+    // Send the message and get the response using the updated API
+    const result = await chat.sendMessage(latestMessage.parts[0].text);
+    const response = await result.response;
+    
+    // Extract the response text using the text() method
+    const responseText = response.text();
 
     return {
       text: responseText,
-      safetyRatings: safetyRatings,
+      // Safety ratings might not be available in this format with the newer API
     };
   } catch (error) {
     console.error('Gemini API error:', error);
-    throw new Error('Failed to generate response from Gemini');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to generate response from Gemini: ${errorMessage}`);
   }
 };
 
