@@ -178,8 +178,8 @@ const FAQPage = () => {
   })).filter((category) => category.faqs.length > 0);
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold mb-8 text-center">Frequently Asked Questions</h1>
+    <div className="container mx-auto px-4 py-12 bg-gray-900 text-white">
+      <h1 className="text-3xl font-bold mb-8 text-center text-white">Frequently Asked Questions</h1>
 
       {/* Search and Filter */}
       <div className="mb-10 max-w-2xl mx-auto">
@@ -192,7 +192,7 @@ const FAQPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search questions..."
-            className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="block w-full pl-10 pr-4 py-3 border border-gray-700 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder-gray-400"
           />
         </div>
 
@@ -203,7 +203,7 @@ const FAQPage = () => {
             className={`px-4 py-2 rounded-md text-sm ${
               selectedCategory === null
                 ? 'bg-teal-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
             }`}
           >
             All Categories
@@ -215,7 +215,7 @@ const FAQPage = () => {
               className={`px-4 py-2 rounded-md text-sm ${
                 selectedCategory === category.id
                   ? 'bg-teal-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
               }`}
             >
               {category.name}
@@ -228,8 +228,8 @@ const FAQPage = () => {
       <div className="max-w-3xl mx-auto">
         {filteredCategories.length === 0 ? (
           <div className="text-center py-8">
-            <h3 className="text-xl font-medium mb-2">No matching FAQs found</h3>
-            <p className="text-gray-600">
+            <h3 className="text-xl font-medium mb-2 text-white">No matching FAQs found</h3>
+            <p className="text-gray-300">
               Try adjusting your search query or selecting a different category.
             </p>
           </div>
@@ -237,28 +237,28 @@ const FAQPage = () => {
           filteredCategories.map((category) => (
             <div key={category.id} className="mb-8">
               {(selectedCategory === null || filteredCategories.length > 1) && (
-                <h2 className="text-xl font-bold mb-4">{category.name}</h2>
+                <h2 className="text-xl font-bold mb-4 text-white">{category.name}</h2>
               )}
               <div className="space-y-4">
                 {category.faqs.map((faq) => (
                   <div
                     key={faq.id}
-                    className="border border-gray-200 rounded-lg overflow-hidden"
+                    className="border border-gray-700 rounded-lg overflow-hidden"
                   >
                     <button
                       onClick={() => toggleFAQ(faq.id)}
-                      className="w-full flex justify-between items-center p-4 text-left bg-white hover:bg-gray-50 focus:outline-none transition-colors"
+                      className="w-full flex justify-between items-center p-4 text-left bg-gray-800 hover:bg-gray-700 focus:outline-none transition-colors"
                     >
-                      <span className="font-medium text-gray-900">{faq.question}</span>
+                      <span className="font-medium text-white">{faq.question}</span>
                       {expandedFAQs.includes(faq.id) ? (
-                        <ChevronUp size={20} className="text-gray-500 flex-shrink-0" />
+                        <ChevronUp size={20} className="text-gray-300 flex-shrink-0" />
                       ) : (
-                        <ChevronDown size={20} className="text-gray-500 flex-shrink-0" />
+                        <ChevronDown size={20} className="text-gray-300 flex-shrink-0" />
                       )}
                     </button>
                     {expandedFAQs.includes(faq.id) && (
-                      <div className="p-4 bg-gray-50 border-t border-gray-200">
-                        <p className="text-gray-700 whitespace-pre-line">{faq.answer}</p>
+                      <div className="p-4 bg-gray-700 border-t border-gray-600">
+                        <p className="text-gray-100 whitespace-pre-line">{faq.answer}</p>
                       </div>
                     )}
                   </div>
@@ -270,9 +270,9 @@ const FAQPage = () => {
       </div>
 
       {/* Contact Section */}
-      <div className="mt-12 bg-gray-50 rounded-xl p-8 text-center max-w-3xl mx-auto">
-        <h2 className="text-xl font-semibold mb-4">Can't find what you're looking for?</h2>
-        <p className="text-gray-700 mb-6">
+      <div className="mt-12 bg-gray-800 border border-gray-700 rounded-xl p-8 text-center max-w-3xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4 text-white">Can't find what you're looking for?</h2>
+        <p className="text-gray-300 mb-6">
           Our customer support team is here to help with any questions you might have.
         </p>
         <a

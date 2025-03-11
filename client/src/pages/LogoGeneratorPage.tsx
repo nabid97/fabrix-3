@@ -158,18 +158,18 @@ const LogoGeneratorPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-center mb-8">AI Logo Generator</h1>
+    <div className="container mx-auto px-4 py-12 bg-gray-900">
+      <h1 className="text-3xl font-bold text-center mb-8 text-white">AI Logo Generator</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Logo Generation Form */}
         <div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-6">Brand Information</h2>
+          <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
+            <h2 className="text-xl font-semibold mb-6 text-white">Brand Information</h2>
             
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="companyName" className="block text-sm font-medium text-gray-200 mb-1">
                   Company Name *
                 </label>
                 <input
@@ -179,13 +179,13 @@ const LogoGeneratorPage: React.FC = () => {
                   value={formData.companyName}
                   onChange={handleInputChange}
                   required
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="Enter your company name"
                 />
               </div>
               
               <div className="mb-4">
-                <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="industry" className="block text-sm font-medium text-gray-200 mb-1">
                   Industry *
                 </label>
                 <select
@@ -194,7 +194,7 @@ const LogoGeneratorPage: React.FC = () => {
                   value={formData.industry}
                   onChange={handleInputChange}
                   required
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   <option value="" disabled>Select your industry</option>
                   {industries.map((industry) => (
@@ -206,7 +206,7 @@ const LogoGeneratorPage: React.FC = () => {
               </div>
               
               <div className="mb-4">
-                <label htmlFor="slogan" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="slogan" className="block text-sm font-medium text-gray-200 mb-1">
                   Slogan (Optional)
                 </label>
                 <input
@@ -215,15 +215,15 @@ const LogoGeneratorPage: React.FC = () => {
                   name="slogan"
                   value={formData.slogan}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="Enter your slogan or tagline"
                 />
               </div>
               
-              <h2 className="text-xl font-semibold mt-8 mb-6">Design Preferences</h2>
+              <h2 className="text-xl font-semibold mt-8 mb-6 text-white">Design Preferences</h2>
               
               <div className="mb-4">
-                <label htmlFor="style" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="style" className="block text-sm font-medium text-gray-200 mb-1">
                   Logo Style *
                 </label>
                 <select
@@ -232,7 +232,7 @@ const LogoGeneratorPage: React.FC = () => {
                   value={formData.style}
                   onChange={handleInputChange}
                   required
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   <option value="" disabled>Select a style</option>
                   {styles.map((style) => (
@@ -244,7 +244,7 @@ const LogoGeneratorPage: React.FC = () => {
               </div>
               
               <div className="mb-4">
-                <label htmlFor="colorPalette" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="colorPalette" className="block text-sm font-medium text-gray-200 mb-1">
                   Color Palette *
                 </label>
                 <select
@@ -252,7 +252,7 @@ const LogoGeneratorPage: React.FC = () => {
                   name="colorPalette"
                   value={selectedPalette}
                   onChange={handleColorPaletteChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   {colorPalettes.map((palette) => (
                     <option key={palette.name} value={palette.name}>
@@ -265,7 +265,7 @@ const LogoGeneratorPage: React.FC = () => {
               {selectedPalette === 'Custom Colors' && (
                 <div className="mb-4 grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="customPrimaryColor" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="customPrimaryColor" className="block text-sm font-medium text-gray-200 mb-1">
                       Primary
                     </label>
                     <input
@@ -274,11 +274,11 @@ const LogoGeneratorPage: React.FC = () => {
                       name="customPrimaryColor"
                       value={formData.customPrimaryColor}
                       onChange={handleCustomColorChange}
-                      className="w-full h-10 border border-gray-300 rounded-md cursor-pointer"
+                      className="w-full h-10 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
                     />
                   </div>
                   <div>
-                    <label htmlFor="customSecondaryColor" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="customSecondaryColor" className="block text-sm font-medium text-gray-200 mb-1">
                       Secondary
                     </label>
                     <input
@@ -287,17 +287,17 @@ const LogoGeneratorPage: React.FC = () => {
                       name="customSecondaryColor"
                       value={formData.customSecondaryColor}
                       onChange={handleCustomColorChange}
-                      className="w-full h-10 border border-gray-300 rounded-md cursor-pointer"
+                      className="w-full h-10 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
                     />
                   </div>
                 </div>
               )}
               
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-200 mb-1">
                   Logo Size *
                 </label>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-4 text-white">
                   <div>
                     <input
                       type="radio"
@@ -348,7 +348,7 @@ const LogoGeneratorPage: React.FC = () => {
               </div>
               
               {error && (
-                <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md">
+                <div className="mt-4 p-3 bg-red-900 text-red-100 rounded-md">
                   {error}
                 </div>
               )}
@@ -358,10 +358,10 @@ const LogoGeneratorPage: React.FC = () => {
         
         {/* Logo Preview */}
         <div>
-          <div className="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
-            <h2 className="text-xl font-semibold mb-6">Logo Preview</h2>
+          <div className="bg-gray-800 p-6 rounded-lg shadow-md h-full flex flex-col border border-gray-700">
+            <h2 className="text-xl font-semibold mb-6 text-white">Logo Preview</h2>
             
-            <div className="flex-grow flex items-center justify-center bg-gray-100 rounded-md mb-6">
+            <div className="flex-grow flex items-center justify-center bg-gray-700 rounded-md mb-6">
               {generatedLogo ? (
                 <img 
                   src={generatedLogo} 
@@ -370,12 +370,12 @@ const LogoGeneratorPage: React.FC = () => {
                 />
               ) : (
                 <div className="text-center p-8">
-                  <div className="w-32 h-32 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                  <div className="w-32 h-32 mx-auto mb-4 bg-gray-600 rounded-full flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-gray-500">
+                  <p className="text-gray-300">
                     {generating ? 'Generating your logo...' : 'Fill out the form and generate to see your logo preview'}
                   </p>
                 </div>
@@ -385,13 +385,13 @@ const LogoGeneratorPage: React.FC = () => {
             {generatedLogo && (
               <>
                 <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-2">Logo Information</h3>
-                  <ul className="space-y-2 text-gray-700">
-                    <li><strong>Company:</strong> {formData.companyName}</li>
-                    <li><strong>Industry:</strong> {formData.industry}</li>
-                    {formData.slogan && <li><strong>Slogan:</strong> {formData.slogan}</li>}
-                    <li><strong>Style:</strong> {formData.style}</li>
-                    <li><strong>Size:</strong> {formData.size}</li>
+                  <h3 className="text-lg font-medium mb-2 text-white">Logo Information</h3>
+                  <ul className="space-y-2 text-gray-300">
+                    <li><strong className="text-white">Company:</strong> {formData.companyName}</li>
+                    <li><strong className="text-white">Industry:</strong> {formData.industry}</li>
+                    {formData.slogan && <li><strong className="text-white">Slogan:</strong> {formData.slogan}</li>}
+                    <li><strong className="text-white">Style:</strong> {formData.style}</li>
+                    <li><strong className="text-white">Size:</strong> {formData.size}</li>
                   </ul>
                 </div>
                 
