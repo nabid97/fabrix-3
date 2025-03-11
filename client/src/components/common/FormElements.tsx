@@ -1,4 +1,4 @@
-import React, { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from 'react';
+import React, { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import { AlertCircle } from 'lucide-react';
 
 // Common props for all form elements

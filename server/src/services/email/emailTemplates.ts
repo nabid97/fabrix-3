@@ -149,7 +149,53 @@ export const loadEmailTemplate = (templateName: TemplateType): string => {
 </html>
       `;
     
-    case 'contactForm':
+      case 'contactForm':
+        return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Contact Form Confirmation</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #4f46e5; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; }
+          .footer { background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; }
+          .message-box { background-color: #f9fafb; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>We've Received Your Message</h1>
+          </div>
+          <div class="content">
+            <p>Dear {{name}},</p>
+            <p>Thank you for contacting FabriX. This email confirms that we've received your message on {{date}}.</p>
+            
+            <div class="message-box">
+              <h3>Your Message</h3>
+              <p><strong>Subject:</strong> {{subject}}</p>
+              <p><strong>Message:</strong></p>
+              <p>{{message}}</p>
+            </div>
+            
+            <p>Our team will review your message and get back to you as soon as possible, usually within 1-2 business days.</p>
+            
+            <p>If you have any urgent questions, please call us at +1 (555) 123-4567.</p>
+            
+            <p>Best regards,<br>The FabriX Team</p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} FabriX. All rights reserved.</p>
+            <p>123 Fabric Street, Suite 100<br>Textile City, TX 75001</p>
+          </div>
+        </div>
+      </body>
+      </html>
+        `;
       return `
 <!DOCTYPE html>
 <html>

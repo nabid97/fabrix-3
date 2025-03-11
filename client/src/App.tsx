@@ -10,6 +10,7 @@ import Chatbot from './components/common/Chatbot';
 import { HelmetProvider } from 'react-helmet-async';
 
 
+
 // Lazy-loaded page components
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ClothingPage = lazy(() => import('./pages/ClothingPage'));

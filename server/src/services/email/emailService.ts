@@ -58,16 +58,16 @@ export const sendOrderConfirmationEmail = async (order: IOrder, email: string): 
       )
       .replace('{{shippingMethod}}', order.shipping.method);
     
-    // Send email
-    await transporter.sendMail({
-      from: `"FabriX" <${config.email.from}>`,
-      to: email,
-      subject: `FabriX Order Confirmation - #${order.orderNumber}`,
-      html,
-      text: `Thank you for your order #${order.orderNumber}! Your order has been received and is being processed.`,
-    });
-    
-    console.log(`Order confirmation email sent to ${email}`);
+// Send email
+await transporter.sendMail({
+  from: `"FabriX" <${config.email.from}>`,
+  to: email,
+  subject: `Your FabriX Order #${order.orderNumber} Confirmation`,
+  html,
+  text: `Thank you for your order! Order #${order.orderNumber} has been confirmed.`,
+});
+
+console.log(`Order confirmation email sent to ${email}`);
   } catch (error) {
     console.error('Error sending order confirmation email:', error);
     // Don't throw error to prevent disrupting the order process

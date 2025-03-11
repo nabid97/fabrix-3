@@ -17,6 +17,8 @@ import paymentRoutes from './routes/paymentRoutes';
 import logoRoutes from './routes/logoRoutes';
 import chatRoutes from './routes/chatRoutes';
 import placeholderRoutes from './routes/placeholderRoutes';
+import contactRoutes from './routes/contactRoutes';
+
 //import imageRoutes from './routes/imageRoutes';
 
 
@@ -47,6 +49,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/logo', logoRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/placeholder', placeholderRoutes);
+app.use('/api/contact', contactRoutes);
+
 //app.use('/api/images', imageRoutes);
 
 
