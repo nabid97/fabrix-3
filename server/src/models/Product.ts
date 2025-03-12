@@ -152,6 +152,17 @@ const clothingSchema = new Schema({
   },
 });
 
+/* Example schema structure:
+{
+  name: { type: String, required: true },
+  type: { type: String, required: true },
+  // other fields...
+  images: [{ type: String }], // Array of image URLs
+  // OR
+  imageUrl: { type: String }  // Single image URL
+}
+*/
+
 // Fabric product schema
 const fabricSchema = new Schema({
   fabricType: {
@@ -159,20 +170,23 @@ const fabricSchema = new Schema({
     required: true,
     trim: true,
   },
-  composition: {
+  pattern: {
     type: String,
     required: true,
-    trim: true,
-  },
-  weight: {
-    type: String,
-    required: true,
-    trim: true,
   },
   width: {
     type: Number,
     required: true,
     min: 0,
+  },
+  composition: {
+    type: [String],
+    required: true,
+  },
+  weight: {
+    type: String,
+    required: true,
+    trim: true,
   },
   availableColors: {
     type: [String],
@@ -181,12 +195,12 @@ const fabricSchema = new Schema({
   },
   styles: {
     type: [String],
-    required: true,
+    default: ['Regular'],
   },
   minOrderLength: {
     type: Number,
-    required: true,
-    min: [0.1, 'Minimum order length must be at least 0.1 meter'],
+    required: false,
+    min: 1,
     default: 1,
   },
   careInstructions: {
@@ -196,6 +210,12 @@ const fabricSchema = new Schema({
   certifications: {
     type: [String],
     default: [],
+  },
+  minOrderQuantity: {
+    type: Number,
+    required: true,
+    min: 1,
+    default: 1,
   },
 });
 
