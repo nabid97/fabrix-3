@@ -16,6 +16,7 @@ interface ClothingProduct {
   fabricOptions: string[];
   gender: string[];
   minOrderQuantity: number;
+  images?: string[]; // Optional array of image URLs
 }
 
 // Color options with hex values
@@ -32,10 +33,12 @@ const colorOptions = [
   { name: 'Pink', value: 'pink', hex: '#ec4899' },
 ];
 
+// Fix for the formatPrice function
 const formatPrice = (price: number | undefined | null): string => {
   if (price === undefined || price === null) return '0.00';
   return price.toFixed(2);
 };
+
 const ClothingPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -92,12 +95,30 @@ const ClothingPage = () => {
   useEffect(() => {
     const loadProducts = async () => {
       setLoading(true);
+      setError(null); // Clear previous errors
+      
       try {
+        console.log('Attempting to fetch clothing products...');
         const data = await fetchClothingProducts();
-        setProducts(data);
-      } catch (err) {
-        setError('Failed to load products. Please try again later.');
+        
+        if (data && Array.isArray(data)) {
+          setProducts(data);
+          console.log(`Successfully loaded ${data.length} clothing products`);
+        } else {
+          throw new Error('Invalid data format received from API');
+        }
+      } catch (err: any) {
         console.error('Error loading products:', err);
+        
+        if (err.message === 'Network Error') {
+          setError('Unable to connect to the server. Please check if the backend is running.');
+        } else if (err.code === 'ECONNABORTED') {
+          setError('Request timed out. Please try again later.');
+        } else if (err.response && err.response.status === 404) {
+          setError('API endpoint not found. Check server configuration.');
+        } else {
+          setError(`Failed to load products: ${err.message}`);
+        }
       } finally {
         setLoading(false);
       }
@@ -242,14 +263,14 @@ const ClothingPage = () => {
   };
   
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold mb-8 text-center">Custom Clothing</h1>
+    <div className="container mx-auto px-4 py-12 bg-gray-900 text-white">
+      <h1 className="text-3xl font-bold mb-8 text-center text-white">Custom Clothing</h1>
       
       {/* Mobile Filters Toggle */}
       <div className="lg:hidden mb-6">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="w-full bg-gray-100 px-4 py-2 rounded-md flex items-center justify-center space-x-2"
+          className="w-full bg-gray-800 text-white px-4 py-2 rounded-md flex items-center justify-center space-x-2"
         >
           <Filter size={18} />
           <span>{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
@@ -261,13 +282,13 @@ const ClothingPage = () => {
         <div
           className={`${
             showFilters ? 'block' : 'hidden'
-          } lg:block lg:w-1/4 bg-white rounded-xl shadow-md p-6 h-fit sticky top-24`}
+          } lg:block lg:w-1/4 bg-gray-800 text-white rounded-xl shadow-md p-6 h-fit sticky top-24`}
         >
-          <h2 className="text-xl font-semibold mb-6">Filters</h2>
+          <h2 className="text-xl font-semibold mb-6 text-white">Filters</h2>
           
           {/* Gender Filter */}
           <div className="mb-6">
-            <h3 className="font-medium mb-3">Gender</h3>
+            <h3 className="font-medium mb-3 text-white">Gender</h3>
             <div className="space-y-2">
               {['Men', 'Women', 'Unisex'].map((gender) => (
                 <label key={gender} className="flex items-center space-x-2 cursor-pointer">
@@ -281,9 +302,9 @@ const ClothingPage = () => {
                         setSelectedGender
                       )
                     }
-                    className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                    className="rounded border-gray-600 text-teal-500 focus:ring-teal-500 bg-gray-700"
                   />
-                  <span>{gender}</span>
+                  <span className="text-gray-200">{gender}</span>
                 </label>
               ))}
             </div>
@@ -291,15 +312,15 @@ const ClothingPage = () => {
           
           {/* Size Filter */}
           <div className="mb-6">
-            <h3 className="font-medium mb-3">Size</h3>
+            <h3 className="font-medium mb-3 text-white">Size</h3>
             <div className="grid grid-cols-3 gap-2">
               {['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'].map((size) => (
                 <label
                   key={size}
                   className={`border rounded-md px-3 py-1 text-center cursor-pointer transition-colors ${
                     selectedSizes.includes(size)
-                      ? 'bg-teal-100 border-teal-500 text-teal-700'
-                      : 'border-gray-300 hover:bg-gray-50'
+                      ? 'bg-teal-900 border-teal-500 text-teal-300'
+                      : 'border-gray-600 hover:bg-gray-700 text-gray-200'
                   }`}
                 >
                   <input
@@ -316,7 +337,7 @@ const ClothingPage = () => {
           
           {/* Color Filter */}
           <div className="mb-6">
-            <h3 className="font-medium mb-3">Color</h3>
+            <h3 className="font-medium mb-3 text-white">Color</h3>
             <div className="grid grid-cols-5 gap-2">
               {colorOptions.map((color) => (
                 <label
@@ -328,11 +349,11 @@ const ClothingPage = () => {
                     className={`w-8 h-8 rounded-full border-2 ${
                       selectedColors.includes(color.value)
                         ? 'border-teal-500'
-                        : 'border-gray-300'
+                        : 'border-gray-600'
                     }`}
                     style={{
                       backgroundColor: color.hex,
-                      boxShadow: color.value === 'white' ? 'inset 0 0 0 1px #e5e7eb' : 'none',
+                      boxShadow: color.value === 'white' ? 'inset 0 0 0 1px #4b5563' : 'none',
                     }}
                   >
                     {selectedColors.includes(color.value) && (
@@ -352,42 +373,41 @@ const ClothingPage = () => {
                     }
                     className="sr-only"
                   />
-                  <span className="text-xs mt-1">{color.name}</span>
+                  <span className="text-xs mt-1 text-gray-300">{color.name}</span>
                 </label>
               ))}
             </div>
           </div>
           
-                  {/* Fabric Filter */}
-                  <div className="mb-6">
-                    <h3 className="font-medium mb-3">Fabric</h3>
-                   
-<div className="space-y-2">
-  {['Cotton', 'Polyester', 'Cotton-Poly Blend', 'Performance', 'Organic'].map(
-    (fabric, index) => (
-      <label key={fabric} className="flex items-center space-x-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={selectedFabrics.includes(fabric.toLowerCase())}
-          onChange={() =>
-            toggleFilter(
-              fabric.toLowerCase(),
-              selectedFabrics,
-              setSelectedFabrics
-            )
-          }
-          className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-        />
-        <span>{fabric}</span>
-      </label>
-    )
-  )}
-</div>
-                  </div>
-                
+          {/* Fabric Filter */}
+          <div className="mb-6">
+            <h3 className="font-medium mb-3 text-white">Fabric</h3>
+            <div className="space-y-2">
+              {['Cotton', 'Polyester', 'Cotton-Poly Blend', 'Performance', 'Organic'].map(
+                (fabric) => (
+                  <label key={`fabric-${fabric}`} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedFabrics.includes(fabric.toLowerCase())}
+                      onChange={() =>
+                        toggleFilter(
+                          fabric.toLowerCase(),
+                          selectedFabrics,
+                          setSelectedFabrics
+                        )
+                      }
+                      className="rounded border-gray-600 text-teal-500 focus:ring-teal-500 bg-gray-700"
+                    />
+                    <span className="text-gray-200">{fabric}</span>
+                  </label>
+                )
+              )}
+            </div>
+          </div>
+          
           {/* Price Range Filter */}
           <div className="mb-6">
-            <h3 className="font-medium mb-3">Price Range (per item)</h3>
+            <h3 className="font-medium mb-3 text-white">Price Range (per item)</h3>
             <div className="flex items-center space-x-4">
               <div>
                 <label htmlFor="minPrice" className="sr-only">
@@ -395,7 +415,7 @@ const ClothingPage = () => {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500">$</span>
+                    <span className="text-gray-400">$</span>
                   </div>
                   <input
                     type="number"
@@ -404,18 +424,18 @@ const ClothingPage = () => {
                     onChange={(e) => setMinPrice(Number(e.target.value))}
                     min="0"
                     max={maxPrice}
-                    className="pl-7 pr-3 py-2 border border-gray-300 rounded-md w-full"
+                    className="pl-7 pr-3 py-2 border border-gray-600 rounded-md w-full bg-gray-700 text-white"
                   />
                 </div>
               </div>
-              <span>to</span>
+              <span className="text-gray-300">to</span>
               <div>
                 <label htmlFor="maxPrice" className="sr-only">
                   Maximum Price
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500">$</span>
+                    <span className="text-gray-400">$</span>
                   </div>
                   <input
                     type="number"
@@ -423,7 +443,7 @@ const ClothingPage = () => {
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(Number(e.target.value))}
                     min={minPrice}
-                    className="pl-7 pr-3 py-2 border border-gray-300 rounded-md w-full"
+                    className="pl-7 pr-3 py-2 border border-gray-600 rounded-md w-full bg-gray-700 text-white"
                   />
                 </div>
               </div>
@@ -440,7 +460,7 @@ const ClothingPage = () => {
               setMinPrice(0);
               setMaxPrice(1000);
             }}
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md transition-colors"
+            className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md transition-colors"
           >
             Reset Filters
           </button>
@@ -450,16 +470,16 @@ const ClothingPage = () => {
         <div className="lg:w-3/4">
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
             </div>
           ) : error ? (
-            <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
+            <div className="bg-red-900 text-red-100 p-4 rounded-lg mb-6">
               {error}
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <h3 className="text-xl font-medium mb-2">No products found</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-xl font-medium mb-2 text-white">No products found</h3>
+              <p className="text-gray-300 mb-6">
                 Try adjusting your filters to find what you're looking for.
               </p>
               <button
@@ -481,25 +501,28 @@ const ClothingPage = () => {
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                  className="bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
                 >
                   <div className="h-64 overflow-hidden">
                     <img
-                      src={product.imageUrl}
+                      src={product.imageUrl || product.images?.[0]}
                       alt={product.name}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Product+Image';
+                      }}
                     />
                   </div>
                   <div className="p-6">
-                    <h3 className="text-xl font-bold mb-2">{product.name}</h3>
-                    <p className="text-gray-600 mb-4 h-12 overflow-hidden">
+                    <h3 className="text-xl font-bold mb-2 text-white">{product.name}</h3>
+                    <p className="text-gray-300 mb-4 h-12 overflow-hidden">
                       {product.description}
                     </p>
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-xl font-bold text-teal-600">
+                      <span className="text-xl font-bold text-teal-400">
                         ${formatPrice(product.basePrice)}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-400">
                         Min. Order: {product.minOrderQuantity}
                       </span>
                     </div>
@@ -520,13 +543,14 @@ const ClothingPage = () => {
       
       {/* Product Customization Modal */}
       {selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white z-10 p-6 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Customize Your Order</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto text-white border border-gray-700">
+            <div className="sticky top-0 bg-gray-800 z-10 p-6 border-b border-gray-700 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Customize Your Order</h2>
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-300 hover:text-white"
+                aria-label="Close"
               >
                 <X size={24} />
               </button>
@@ -536,7 +560,7 @@ const ClothingPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Product Preview */}
                 <div>
-                  <div className="bg-gray-100 rounded-lg h-80 flex items-center justify-center mb-4 relative overflow-hidden">
+                  <div className="bg-gray-900 rounded-lg h-80 flex items-center justify-center mb-4 relative overflow-hidden border border-gray-700">
                     <img
                       src={selectedProduct.imageUrl}
                       alt={selectedProduct.name}
@@ -566,21 +590,21 @@ const ClothingPage = () => {
                   </div>
                   
                   <div className="text-center mb-6">
-                    <h3 className="text-xl font-bold">{selectedProduct.name}</h3>
-                    <p className="text-gray-600">${formatPrice(selectedProduct.basePrice)} per item</p>
+                    <h3 className="text-xl font-bold text-white">{selectedProduct.name}</h3>
+                    <p className="text-teal-400">${formatPrice(selectedProduct.basePrice)} per item</p>
                   </div>
                   
                   {/* Logo Upload/Select */}
                   <div className="mb-6">
-                    <h4 className="font-medium mb-2">Add Your Logo</h4>
+                    <h4 className="font-medium mb-2 text-white">Add Your Logo</h4>
                     
                     <div className="space-y-4">
                       {/* Upload Logo */}
-                      <div className="border border-gray-300 rounded-md p-4">
+                      <div className="border border-gray-700 rounded-md p-4">
                         <label className="flex flex-col items-center cursor-pointer">
-                          <div className="bg-gray-100 rounded-md w-full py-8 flex flex-col items-center justify-center">
-                            <Upload size={24} className="text-gray-500 mb-2" />
-                            <span className="text-sm text-gray-500">
+                          <div className="bg-gray-900 rounded-md w-full py-8 flex flex-col items-center justify-center">
+                            <Upload size={24} className="text-gray-400 mb-2" />
+                            <span className="text-sm text-gray-400">
                               Click to upload logo (JPG, PNG, SVG)
                             </span>
                           </div>
@@ -593,16 +617,16 @@ const ClothingPage = () => {
                         </label>
                         
                         {logoUploadError && (
-                          <p className="text-red-500 text-sm mt-2">{logoUploadError}</p>
+                          <p className="text-red-400 text-sm mt-2">{logoUploadError}</p>
                         )}
                       </div>
                       
                       {/* Or use generated logo */}
                       {logoFromGenerator && (
-                        <div className="border border-gray-300 rounded-md p-4">
-                          <p className="text-sm text-gray-600 mb-2">Or use your generated logo:</p>
+                        <div className="border border-gray-700 rounded-md p-4">
+                          <p className="text-sm text-gray-300 mb-2">Or use your generated logo:</p>
                           <div className="flex items-center">
-                            <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden mr-4">
+                            <div className="w-12 h-12 bg-gray-900 rounded-md overflow-hidden mr-4 border border-gray-700">
                               <img
                                 src={logoFromGenerator}
                                 alt="Generated Logo"
@@ -616,7 +640,7 @@ const ClothingPage = () => {
                                   logoUrl: logoFromGenerator
                                 }));
                               }}
-                              className="text-teal-600 text-sm font-medium hover:text-teal-800"
+                              className="text-teal-400 text-sm font-medium hover:text-teal-300"
                             >
                               Use this logo
                             </button>
@@ -627,7 +651,7 @@ const ClothingPage = () => {
                       {/* Logo Position */}
                       {customization.logoUrl && (
                         <div>
-                          <h4 className="font-medium mb-2">Logo Position</h4>
+                          <h4 className="font-medium mb-2 text-white">Logo Position</h4>
                           <div className="grid grid-cols-2 gap-2">
                             {[
                               { id: 'left-chest', name: 'Left Chest' },
@@ -636,11 +660,11 @@ const ClothingPage = () => {
                               { id: 'back', name: 'Back' },
                             ].map((position) => (
                               <label
-                                key={position.id}
+                                key={`logo-position-${position.id}`}
                                 className={`border rounded-md px-3 py-2 text-center cursor-pointer transition-colors ${
                                   customization.logoPosition === position.id
-                                    ? 'bg-teal-100 border-teal-500 text-teal-700'
-                                    : 'border-gray-300 hover:bg-gray-50'
+                                    ? 'bg-teal-900 border-teal-600 text-teal-300'
+                                    : 'border-gray-700 hover:bg-gray-700 text-gray-300'
                                 }`}
                               >
                                 <input
@@ -671,7 +695,7 @@ const ClothingPage = () => {
                   <div className="space-y-6">
                     {/* Size Selection */}
                     <div>
-                      <label htmlFor="size" className="block font-medium mb-2">
+                      <label htmlFor="size" className="block font-medium mb-2 text-white">
                         Size
                       </label>
                       <select
@@ -680,10 +704,10 @@ const ClothingPage = () => {
                         onChange={(e) =>
                           setCustomization((prev) => ({ ...prev, size: e.target.value }))
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       >
-                        {selectedProduct.availableSizes.map((size) => (
-                          <option key={size} value={size}>
+                        {selectedProduct.availableSizes.map((size, index) => (
+                          <option key={`size-${size}-${index}`} value={size}>
                             {size}
                           </option>
                         ))}
@@ -692,28 +716,28 @@ const ClothingPage = () => {
                     
                     {/* Color Selection */}
                     <div>
-                      <label className="block font-medium mb-2">Color</label>
+                      <label className="block font-medium mb-2 text-white">Color</label>
                       <div className="grid grid-cols-4 gap-2">
-                        {selectedProduct.availableColors.map((colorName) => {
+                        {selectedProduct.availableColors.map((colorName, index) => {
                           const colorOption = colorOptions.find(
                             (c) => c.value === colorName.toLowerCase()
                           );
                           return (
                             <label
-                              key={colorName}
+                              key={`color-select-${colorName}-${index}`}
                               className={`border rounded-md p-2 flex flex-col items-center cursor-pointer transition-colors ${
                                 customization.color === colorName
-                                  ? 'bg-teal-50 border-teal-500'
-                                  : 'border-gray-300 hover:bg-gray-50'
+                                  ? 'bg-gray-900 border-teal-500'
+                                  : 'border-gray-700 hover:bg-gray-700'
                               }`}
                             >
                               <div
-                                className="w-8 h-8 rounded-full border border-gray-300 mb-1"
+                                className="w-8 h-8 rounded-full border border-gray-700 mb-1"
                                 style={{
                                   backgroundColor: colorOption?.hex || '#CCCCCC',
                                   boxShadow:
                                     colorName.toLowerCase() === 'white'
-                                      ? 'inset 0 0 0 1px #e5e7eb'
+                                      ? 'inset 0 0 0 1px #4b5563'
                                       : 'none',
                                 }}
                               ></div>
@@ -730,7 +754,7 @@ const ClothingPage = () => {
                                 }
                                 className="sr-only"
                               />
-                              <span className="text-xs">{colorName}</span>
+                              <span className="text-xs text-gray-300">{colorName}</span>
                             </label>
                           );
                         })}
@@ -739,7 +763,7 @@ const ClothingPage = () => {
                     
                     {/* Fabric Selection */}
                     <div>
-                      <label htmlFor="fabric" className="block font-medium mb-2">
+                      <label htmlFor="fabric" className="block font-medium mb-2 text-white">
                         Fabric
                       </label>
                       <select
@@ -748,10 +772,10 @@ const ClothingPage = () => {
                         onChange={(e) =>
                           setCustomization((prev) => ({ ...prev, fabric: e.target.value }))
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       >
-                        {selectedProduct.fabricOptions.map((fabric) => (
-                          <option key={fabric} value={fabric}>
+                        {selectedProduct.fabricOptions.map((fabric, index) => (
+                          <option key={`fabric-${fabric}-${index}`} value={fabric}>
                             {fabric}
                           </option>
                         ))}
@@ -760,7 +784,7 @@ const ClothingPage = () => {
                     
                     {/* Quantity */}
                     <div>
-                      <label htmlFor="quantity" className="block font-medium mb-2">
+                      <label htmlFor="quantity" className="block font-medium mb-2 text-white">
                         Quantity (Minimum {selectedProduct.minOrderQuantity} pcs)
                       </label>
                       <input
@@ -778,13 +802,13 @@ const ClothingPage = () => {
                             ),
                           }))
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       />
                     </div>
                     
                     {/* Special Instructions */}
                     <div>
-                      <label htmlFor="notes" className="block font-medium mb-2">
+                      <label htmlFor="notes" className="block font-medium mb-2 text-white">
                         Special Instructions (Optional)
                       </label>
                       <textarea
@@ -794,24 +818,24 @@ const ClothingPage = () => {
                           setCustomization((prev) => ({ ...prev, notes: e.target.value }))
                         }
                         rows={3}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         placeholder="Any specific requirements for your order..."
                       ></textarea>
                     </div>
                     
                     {/* Total Price */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex justify-between items-center mb-2">
-                        <span>Price per item:</span>
-                        <span>${formatPrice(selectedProduct.basePrice)}</span>
+                    <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
+                      <div key="price-per-item" className="flex justify-between items-center mb-2">
+                        <span className="text-gray-300">Price per item:</span>
+                        <span className="text-white">${formatPrice(selectedProduct.basePrice)}</span>
                       </div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span>Quantity:</span>
-                        <span>{customization.quantity} pcs</span>
+                      <div key="quantity" className="flex justify-between items-center mb-2">
+                        <span className="text-gray-300">Quantity:</span>
+                        <span className="text-white">{customization.quantity} pcs</span>
                       </div>
-                      <div className="flex justify-between items-center font-bold text-lg border-t border-gray-300 pt-2 mt-2">
-                        <span>Total Price:</span>
-                        <span>${formatPrice(selectedProduct.basePrice * customization.quantity)}</span>
+                      <div key="total-price" className="flex justify-between items-center font-bold text-lg border-t border-gray-700 pt-2 mt-2">
+                        <span className="text-white">Total Price:</span>
+                        <span className="text-teal-400">${formatPrice(selectedProduct.basePrice * customization.quantity)}</span>
                       </div>
                     </div>
                     
@@ -824,9 +848,9 @@ const ClothingPage = () => {
                       Add to Cart
                     </button>
                     
-                    <p className="text-sm text-gray-500 text-center">
+                    <p className="text-sm text-gray-400 text-center">
                       Not ready to order? Visit our{' '}
-                      <Link to="/logo-generator" className="text-teal-600 hover:underline">
+                      <Link to="/logo-generator" className="text-teal-400 hover:underline">
                         Logo Generator
                       </Link>{' '}
                       to create a custom logo for your clothing.
@@ -840,15 +864,15 @@ const ClothingPage = () => {
       )}
       
       {/* Information Section */}
-      <div className="mt-12 bg-gray-50 rounded-xl p-6">
-        <h2 className="text-xl font-semibold mb-4">Bulk Ordering Information</h2>
-        <p className="text-gray-700 mb-4">
+      <div className="mt-12 bg-gray-800 rounded-xl p-6">
+        <h2 className="text-xl font-semibold mb-4 text-white">Bulk Ordering Information</h2>
+        <p className="text-gray-300 mb-4">
           All clothing items require a minimum order quantity as specified per product.
           Customization options include size, color, fabric type, and logo placement.
         </p>
-        <p className="text-gray-700">
+        <p className="text-gray-300">
           Need a custom logo? Try our{' '}
-          <Link to="/logo-generator" className="text-teal-600 hover:underline">
+          <Link to="/logo-generator" className="text-teal-400 hover:underline">
             Logo Generator
           </Link>{' '}
           or upload your own design. Production time is typically 2-3 weeks after order confirmation.

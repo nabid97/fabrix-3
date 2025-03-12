@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Base API URL
-const API_URL = process.env.REACT_APP_API_URL || '/api';
+// Set the base API URL based on environment
+const API_URL = '/api';  // This will use the proxy settings in package.json
 
 // Product interfaces
 export interface ClothingProduct {
@@ -15,20 +15,25 @@ export interface ClothingProduct {
   fabricOptions: string[];
   gender: string[];
   minOrderQuantity: number;
+  images?: string[];
 }
 
+// Update the FabricProduct interface
 export interface FabricProduct {
   id: string;
   name: string;
   description: string;
   pricePerMeter: number;
   imageUrl: string;
-  type: string;
   availableColors: string[];
-  styles: string[];
-  composition: string;
+  type: string;
+  pattern?: string;
+  width?: number;
+  composition: string | string[];
   weight: string;
-  minOrderLength: number;
+  minOrderQuantity: number;
+  minOrderLength?: number;
+  styles?: string[];
 }
 
 /**
@@ -60,26 +65,61 @@ export const fetchProducts = async (
  */
 export const fetchClothingProducts = async (): Promise<ClothingProduct[]> => {
   try {
-    const response = await axios.get(`${API_URL}/products/clothing`);
+    console.log(`Fetching clothing products from: ${API_URL}/products/clothing`);
+    const response = await axios.get(`${API_URL}/products/clothing`, {
+      // Add these options to help diagnose issues
+      timeout: 10000, // 10 seconds timeout
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    console.log('API response:', response.status);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // Better error logging
     console.error('Error fetching clothing products:', error);
-    throw error;
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received');
+    }
+    throw error;  // Rethrow to let component handle it
   }
 };
 
 /**
  * Fetch fabric products
  */
-export const fetchFabrics = async (): Promise<FabricProduct[]> => {
+export const fetchFabricProducts = async (): Promise<FabricProduct[]> => {
   try {
-    const response = await axios.get(`${API_URL}/products/fabric`);
+    const response = await axios.get(`${API_URL}/products/fabric`, {
+      timeout: 10000,
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
+    });
     return response.data;
-  } catch (error) {
-    console.error('Error fetching fabrics:', error);
+  } catch (error: any) {
+    console.error('Error fetching fabric products:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    } else if (error.request) {
+      console.error('No response received');
+    }
     throw error;
   }
 };
+
+// Add alias for backward compatibility
+export const fetchFabrics = fetchFabricProducts;
 
 /**
  * Fetch a single product by ID
