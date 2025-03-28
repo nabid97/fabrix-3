@@ -1,4 +1,10 @@
-import { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import React, { 
+  createContext, 
+  useState, 
+  useContext, 
+  useCallback,  // Add this import
+  ReactNode 
+} from 'react';
 import { generateAIResponse } from '../api/chatbotApi';
 import { faqCategories } from '../pages/FAQPage';
 

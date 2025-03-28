@@ -17,7 +17,20 @@
     "build-server": "cd server && npm run build",
     "seed:data": "cd server && npm run seed",
     "seed:delete": "cd server && npm run seed:destroy",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "test": "concurrently \"npm run test:client\" \"npm run test:server\"",
+    "test:client": "cd client && npm test -- --watchAll=false",
+    "test:server": "cd server && npm test",
+    "test:coverage": "concurrently \"npm run test:client -- --coverage\" \"npm run test:server -- --coverage\"",
+    "lint": "concurrently \"npm run lint:client\" \"npm run lint:server\"",
+    "lint:client": "cd client && npm run lint",
+    "lint:server": "cd server && npm run lint",
+    "ci": "npm run install-all && npm run lint && npm run test && npm run build",
+    "ci:client": "npm run install-client && npm run lint:client && npm run test:client && npm run build-client",
+    "ci:server": "npm run install-server && npm run lint:server && npm run test:server && npm run build-server",
+    "e2e": "cd client && npm run cypress:run",
+    "e2e:open": "cd client && npm run cypress:open",
+    "prepare": "husky install"
   },
   "keywords": [
     "ecommerce",
@@ -33,7 +46,10 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "husky": "^8.0.3",
-    "lint-staged": "^15.1.0"
+    "lint-staged": "^15.1.0",
+    "jest": "^29.6.0",
+    "ts-jest": "^29.1.0",
+    "@types/jest": "^29.5.0"
   },
   "husky": {
     "hooks": {

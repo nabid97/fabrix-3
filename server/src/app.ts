@@ -1,92 +1,32 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
-import mongoose from 'mongoose';
+import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import compression from 'compression';
-import morgan from 'morgan';
-import path from 'path';
-import cookieParser from 'cookie-parser';
-import config from './config';
-import errorMiddleware from './middleware/errorMiddleware';
+import * as dotenv from 'dotenv';
+import { generateChatResponse } from './controllers/chatController';
 
-// Routes
-import productRoutes from './routes/productRoutes';
-import userRoutes from './routes/userRoutes';
-import orderRoutes from './routes/orderRoutes';
-import paymentRoutes from './routes/paymentRoutes';
-import logoRoutes from './routes/logoRoutes';
-import chatRoutes from './routes/chatRoutes';
-import placeholderRoutes from './routes/placeholderRoutes';
-import contactRoutes from './routes/contactRoutes';
+dotenv.config();
 
-//import imageRoutes from './routes/imageRoutes';
-
-
-// Initialize express app
-const app: Express = express();
+const app = express();
 
 // Middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
-app.use(compression());
-app.use(helmet({
-  contentSecurityPolicy: false // Disable for development
-}));
-app.use(morgan('dev'));
-app.use(cors({
-  origin: config.allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors());
+app.use(helmet());
+app.use(express.json());
 
-// API Routes
-app.use('/api/products', productRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/logo', logoRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/placeholder', placeholderRoutes);
-app.use('/api/contact', contactRoutes);
-
-//app.use('/api/images', imageRoutes);
-
-
-
-// Health check
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+// Basic route for health check
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'online',
+    message: 'Fabrix API is running'
+  });
 });
 
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../client/build')));
+// Chat API route - MUST be before the 404 handler
+app.post('/api/chat/gemini', generateChatResponse);
 
-  app.get('*', (req: Request, res: Response) => {
-    res.sendFile(path.resolve(__dirname, '../../client/build', 'index.html'));
-  });
-} else {
-  // For development, add a catch-all route for unmatched API routes
-  app.use('/api/*', (req: Request, res: Response) => {
-    res.status(404).json({ error: `API endpoint not found: ${req.originalUrl}` });
-  });
-}
+// Error handling middleware - must be the last one
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
 
-// Error handling middleware
-app.use(errorMiddleware);
-
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(config.mongoURI);
-    console.log('MongoDB connected successfully');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
-  }
-};
-
-export { connectDB };
-export default app;
+export { app };
