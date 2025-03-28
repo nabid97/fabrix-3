@@ -8,6 +8,17 @@ interface Message {
   timestamp: Date;
 }
 
+// FAQ types
+interface FAQ {
+  question: string;
+  answer: string;
+}
+
+interface FAQCategory {
+  name: string;
+  faqs: FAQ[];
+}
+
 // Fallback responses for common questions
 const fallbackResponses: Record<string, string> = {
   greeting: "Hello! Welcome to FabriX. How can I help you today?",
@@ -24,27 +35,48 @@ const fallbackResponses: Record<string, string> = {
  * 
  * @param userMessage The current user message
  * @param chatHistory Previous messages in the conversation
+ * @param faqCategories List of FAQ categories
  * @returns AI generated response
  */
 export const generateAIResponse = async (
   userMessage: string,
-  chatHistory: Message[]
+  chatHistory: Message[],
+  faqCategories: FAQCategory[]
 ): Promise<string> => {
   try {
-    // Try to get a quick response from predefined fallbacks first
-    const quickResponse = getQuickResponse(userMessage);
-    if (quickResponse) return quickResponse;
+    // Format FAQ context to be more structured
+    const formattedFaqContext = faqCategories.map(category => {
+      return `CATEGORY: ${category.name.toUpperCase()}
+${category.faqs.map(faq => `Q: ${faq.question}
+A: ${faq.answer}`).join('\n\n')}`;
+    }).join('\n\n');
     
-    // Format chat history for the API
+    // Define the system message
+    const systemMessage = {
+      role: 'system',
+      parts: [
+        {
+          text: `You are a customer service chatbot for Fabrix, a company that offers premium fabrics and custom clothing services. Answer ONLY questions related to Fabrix using the FAQ information below. If a question isn't covered in the FAQ, politely explain you don't have that specific information and suggest contacting customer support.
+
+FAQ INFORMATION:
+${formattedFaqContext}
+
+When answering, be concise, helpful, and friendly. Only use information from the FAQ above.`
+        }
+      ]
+    };
+    
+    // Format chat history
     const formattedHistory = chatHistory
       .map((msg) => ({
         role: msg.sender === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }],
       }))
-      .slice(-5); // Only use the last 5 messages for context
+      .slice(-5);
     
-    // Add current user message
+    // Combine all messages
     const messages = [
+      systemMessage,
       ...formattedHistory,
       {
         role: 'user',
@@ -52,82 +84,36 @@ export const generateAIResponse = async (
       },
     ];
     
-    // Try calling the API with a timeout
+    // Make API call
     const response = await axios.post('/api/chat/gemini', {
       messages,
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.4,
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 1024,
       },
-    }, { 
-      timeout: 10000  // 10 second timeout
-    });
+    }, { timeout: 15000 });
     
-    // Check if we got a valid response
+    // Return response
     if (response.data && typeof response.data.text === 'string') {
       return response.data.text;
     }
     
-    // If response structure is unexpected, return fallback
-    return getFallbackResponse(userMessage);
-    
+    throw new Error("Invalid response format from API");
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    // Return a fallback response based on the content
-    return getFallbackResponse(userMessage);
+    console.error(`API request failed:`, error);
+    return "I'm sorry, but I'm having trouble connecting to the server right now. Please try again later or contact our customer support team.";
   }
 };
 
 /**
  * Get a quick response if the query matches known patterns
  */
-function getQuickResponse(userMessage: string): string | null {
-  const lowerMsg = userMessage.toLowerCase();
-  
-  if (lowerMsg.match(/hello|hi|hey|greetings/i)) {
-    return fallbackResponses.greeting;
-  }
-  
-  if (lowerMsg.match(/contact|email|phone|support|help desk/i)) {
-    return fallbackResponses.contact;
-  }
-  
-  // No quick match
-  return null;
-}
 
 /**
  * Get a fallback response based on the message content
  */
-function getFallbackResponse(userMessage: string): string {
-  const lowerMsg = userMessage.toLowerCase();
-  
-  // Check for topic matches
-  if (lowerMsg.includes('fabric') || lowerMsg.includes('material')) {
-    return fallbackResponses.fabric;
-  }
-  
-  if (lowerMsg.includes('cloth') || lowerMsg.includes('garment') || lowerMsg.includes('apparel')) {
-    return fallbackResponses.clothing;
-  }
-  
-  if (lowerMsg.includes('ship') || lowerMsg.includes('deliver')) {
-    return fallbackResponses.shipping;
-  }
-  
-  if (lowerMsg.includes('return') || lowerMsg.includes('refund')) {
-    return fallbackResponses.returns;
-  }
-  
-  if (lowerMsg.includes('price') || lowerMsg.includes('cost') || lowerMsg.includes('fee')) {
-    return fallbackResponses.pricing;
-  }
-  
-  // Default fallback
-  return "Thank you for your message. Our system is currently processing your request. For immediate assistance, please contact our customer service team at support@fabrix.com or call +1 (555) 123-4567.";
-}
 
 /**
  * Determine if conversation should be redirected to human support

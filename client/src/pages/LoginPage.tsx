@@ -4,11 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { AlertCircle } from 'lucide-react';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -29,19 +30,36 @@ const LoginPage = () => {
     e.preventDefault();
     setApiError(null);
     
-    if (!email || !password) {
-      setApiError('Please enter both email and password');
+    if (!username || !password) {
+      setApiError('Please enter both username and password');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       // Login successful, navigate to redirectTo
       navigate(redirectTo);
     } catch (error: any) {
-      setApiError(error.message || 'Login failed. Please check your credentials and try again.');
+      console.log('Login error:', error);
+      
+      // Handle specific error cases
+      if (error.code === 'UserNotConfirmedException') {
+        // Store the username in session storage to pre-fill on verification page
+        sessionStorage.setItem('unconfirmedUser', username);
+        
+        // Show helpful message and link to verification
+        setApiError(
+          'Your account needs verification. Please check your email for a verification code or ' +
+          'click the button below to verify your account.'
+        );
+        
+        // Set a flag to show verification button
+        setNeedsVerification(true);
+      } else {
+        setApiError(error.message || 'Login failed. Please check your credentials and try again.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -64,21 +82,20 @@ const LoginPage = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email Field */}
+          {/* Username Field */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              Username
             </label>
             <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
-              placeholder="email@example.com"
+              id="username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Enter your username"
             />
           </div>
 
@@ -133,6 +150,18 @@ const LoginPage = () => {
               {isSubmitting ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
+
+          {needsVerification && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => navigate(`/verify-account?username=${encodeURIComponent(username)}`)}
+                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-teal-700 bg-teal-100 hover:bg-teal-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+              >
+                Verify your account
+              </button>
+            </div>
+          )}
         </form>
 
         <div className="mt-6 text-center">

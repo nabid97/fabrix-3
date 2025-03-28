@@ -1,59 +1,89 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { ShoppingCart, ChevronLeft } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { getImageWithFallback } from '../utils/imageUtils';
+import { fetchClothingProductById } from '../api/productApi'; // You'll need to create this function
+
+interface ClothingProduct {
+  id: string;
+  name: string;
+  description: string;
+  basePrice: number;
+  imageUrl: string;
+  images?: string[];
+  availableSizes: string[];
+  availableColors: string[];
+  fabricOptions: string[];
+  gender: string[];
+  minOrderQuantity: number;
+}
 
 const ClothingDetailPage = () => {
-  const { productSlug } = useParams<{ productSlug: string }>();
+  const { productId } = useParams<{ productId: string }>();
   const { addItem } = useCart();
   const [loading, setLoading] = useState(true);
-  const [error] = useState<string | null>(null);
-  
-  // In a real app, you would fetch product data based on the slug
-  // For now, we'll use placeholder data
-  const [product] = useState({
-    id: 'clothing-1',
-    name: `${productSlug?.replace(/-/g, ' ')}`,
-    description: 'Premium clothing item with high-quality materials',
-    basePrice: 29.99,
-    imageUrl: '/api/placeholder/400/320',
-    availableSizes: ['S', 'M', 'L', 'XL'],
-    availableColors: ['White', 'Black', 'Navy', 'Red'],
-    fabricOptions: ['Cotton', 'Cotton-Poly Blend'],
-    gender: ['Men', 'Women', 'Unisex'],
-    minOrderQuantity: 50,
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [product, setProduct] = useState<ClothingProduct | null>(null);
+  const navigate = useNavigate();
   
   // Form state for customization
   const [customization, setCustomization] = useState({
-    size: 'M',
-    color: 'Black',
-    fabric: 'Cotton',
-    quantity: 50,
+    size: '',
+    color: '',
+    fabric: '',
+    quantity: 0,
     logoUrl: '',
     logoPosition: 'left-chest',
     notes: '',
   });
   
-  // Simulate loading data
+  // Fetch product data
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    const loadProduct = async () => {
+      if (!productId) {
+        setError('No product ID provided');
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        const productData = await fetchClothingProductById(productId);
+        setProduct(productData);
+        
+        // Set initial customization values
+        setCustomization({
+          size: productData.availableSizes[0] || '',
+          color: productData.availableColors[0] || '',
+          fabric: productData.fabricOptions[0] || '',
+          quantity: productData.minOrderQuantity,
+          logoUrl: '',
+          logoPosition: 'left-chest',
+          notes: '',
+        });
+      } catch (err) {
+        console.error('Error loading product:', err);
+        setError('Failed to load product details. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
-  }, [productSlug]);
+    loadProduct();
+  }, [productId]);
   
   const handleAddToCart = () => {
+    if (!product) return;
+    
     const cartItem = {
       id: `${product.id}-${Date.now()}`,
       type: 'clothing' as const,
       name: product.name,
       price: product.basePrice * customization.quantity,
-      quantity: 1,
-      imageUrl: product.imageUrl,
+      quantity: 1, // This is one cart item, which contains multiple clothing items
+      imageUrl: product.imageUrl || (product.images && product.images[0]) || '',
       size: customization.size,
       color: customization.color,
       fabric: customization.fabric,
@@ -64,7 +94,7 @@ const ClothingDetailPage = () => {
     };
     
     addItem(cartItem);
-    alert('Item added to cart!');
+    navigate('/cart', { state: { addedItem: cartItem } });
   };
   
   if (loading) return <LoadingSpinner message="Loading product details..." />;
@@ -85,6 +115,28 @@ const ClothingDetailPage = () => {
     );
   }
   
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-lg max-w-2xl mx-auto">
+          <h2 className="text-xl font-bold mb-2">Product Not Found</h2>
+          <p>Sorry, we couldn't find the product you're looking for.</p>
+          <div className="mt-4">
+            <Link to="/clothing" className="text-yellow-700 underline">
+              Browse All Clothing
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Get image with fallback
+  const imageProps = getImageWithFallback(
+    product.imageUrl || (product.images && product.images[0]) || '',
+    product.name
+  );
+  
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="mb-6">
@@ -102,8 +154,9 @@ const ClothingDetailPage = () => {
           {/* Product Image */}
           <div className="h-80 bg-gray-100 rounded-lg flex items-center justify-center">
             <img
-              src={product.imageUrl}
+              src={imageProps.src}
               alt={product.name}
+              onError={imageProps.onError}
               className="max-w-full max-h-full object-contain"
             />
           </div>
@@ -143,18 +196,22 @@ const ClothingDetailPage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Color
                 </label>
-                <select
-                  id="color"
-                  value={customization.color}
-                  onChange={(e) => setCustomization({ ...customization, color: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
+                <div className="grid grid-cols-5 gap-2">
                   {product.availableColors.map((color) => (
-                    <option key={color} value={color}>
-                      {color}
-                    </option>
+                    <div 
+                      key={color} 
+                      className={`p-1 rounded-md cursor-pointer ${customization.color === color ? 'ring-2 ring-teal-500' : ''}`}
+                      onClick={() => setCustomization({ ...customization, color })}
+                    >
+                      <div 
+                        className="w-full h-8 rounded"
+                        style={{ backgroundColor: color.toLowerCase() }}
+                        title={color}
+                      ></div>
+                    </div>
                   ))}
-                </select>
+                </div>
+                <p className="mt-1 text-sm text-gray-500">Selected: {customization.color}</p>
               </div>
               
               {/* Fabric Selection */}
@@ -181,18 +238,73 @@ const ClothingDetailPage = () => {
                 <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
                   Quantity (Minimum {product.minOrderQuantity} pcs)
                 </label>
-                <input
-                  type="number"
-                  id="quantity"
-                  min={product.minOrderQuantity}
-                  step={10}
-                  value={customization.quantity}
-                  onChange={(e) => setCustomization({
-                    ...customization,
-                    quantity: Math.max(product.minOrderQuantity, parseInt(e.target.value) || product.minOrderQuantity)
-                  })}
+                <div className="flex items-center">
+                  <button 
+                    onClick={() => setCustomization({
+                      ...customization,
+                      quantity: Math.max(product.minOrderQuantity, customization.quantity - 10)
+                    })}
+                    className="px-3 py-2 bg-gray-200 rounded-l-md"
+                    disabled={customization.quantity <= product.minOrderQuantity}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    id="quantity"
+                    min={product.minOrderQuantity}
+                    step={10}
+                    value={customization.quantity}
+                    onChange={(e) => setCustomization({
+                      ...customization,
+                      quantity: Math.max(product.minOrderQuantity, parseInt(e.target.value) || product.minOrderQuantity)
+                    })}
+                    className="w-20 text-center p-2 border-y border-gray-300 focus:outline-none"
+                  />
+                  <button 
+                    onClick={() => setCustomization({
+                      ...customization,
+                      quantity: customization.quantity + 10
+                    })}
+                    className="px-3 py-2 bg-gray-200 rounded-r-md"
+                  >
+                    +
+                  </button>
+                  <span className="ml-2">pcs</span>
+                </div>
+              </div>
+              
+              {/* Logo Position Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Logo Position
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['left-chest', 'right-chest', 'center-chest', 'back'].map((position) => (
+                    <div 
+                      key={position} 
+                      className={`p-2 border rounded-md cursor-pointer ${customization.logoPosition === position ? 'bg-teal-50 border-teal-500' : 'border-gray-200'}`}
+                      onClick={() => setCustomization({ ...customization, logoPosition: position })}
+                    >
+                      <div className="text-sm capitalize">{position.replace('-', ' ')}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Special Instructions */}
+              <div>
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                  Special Instructions (Optional)
+                </label>
+                <textarea
+                  id="notes"
+                  value={customization.notes}
+                  onChange={(e) => setCustomization({ ...customization, notes: e.target.value })}
+                  rows={3}
                   className="w-full p-2 border border-gray-300 rounded-md"
-                />
+                  placeholder="Add any specific requirements for your order..."
+                ></textarea>
               </div>
               
               {/* Total Price */}

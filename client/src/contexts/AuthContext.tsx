@@ -7,18 +7,19 @@ interface User {
   name?: string;
 }
 
-
-
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   loading: boolean;
   signOut: () => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (username: string, password: string, name: string, email: string) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  verifyAccount: (username: string, code: string) => Promise<boolean>;
+  resendVerificationCode: (username: string) => Promise<boolean>;
+  updateUserAttributes: (attributes: Record<string, string>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,45 +62,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Inside your login method
-const login = async (email: string, password: string) => {
-  setLoading(true);
-  try {
-    const userData = await Auth.signIn(email, password);
-    setIsAuthenticated(true);
-    setUser({
-      email: userData.attributes.email,
-      sub: userData.attributes.sub,
-      name: userData.attributes.name || userData.attributes.email.split('@')[0] || 'User',
-    });
-  } catch (error: unknown) {
-    console.error('Login error:', error);
-    // More detailed error handling
-    if (typeof error === 'object' && error !== null && 'code' in error) {
-      if (error.code === 'UserNotFoundException') {
-        throw new Error('User not found. Please check your email address or sign up.');
-      } else if (error.code === 'NotAuthorizedException') {
-        throw new Error('Incorrect email or password. Please try again.');
-      } else if (error.code === 'UserNotConfirmedException') {
-        throw new Error('Please confirm your account by clicking the link in the verification email.');
-      }
-    }
-    // Re-throw the error if it doesn't match our known error types
-    throw error;
-  } finally {
-    setLoading(false);
-  }
-};
-  const register = async (email: string, password: string, name: string) => {
+  const login = async (emailOrUsername: string, password: string) => {
     setLoading(true);
     try {
-      await Auth.signUp({
-        username: email,
+      let username = emailOrUsername;
+      if (emailOrUsername.includes('@')) {
+        username = emailOrUsername.split('@')[0];
+      }
+      const userData = await Auth.signIn(username, password);
+      setIsAuthenticated(true);
+      setUser({
+        email: userData.attributes.email,
+        sub: userData.attributes.sub,
+        name: userData.attributes.name || userData.attributes.email.split('@')[0] || 'User',
+      });
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.code === 'UserNotFoundException') {
+        throw new Error('Account not found. Please check your username or register.');
+      } else if (error.code === 'NotAuthorizedException') {
+        throw new Error('Incorrect password. Please try again.');
+      } else if (error.message.includes('email format')) {
+        throw new Error('Please enter your username, not email address.');
+      } else {
+        throw error;
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (username: string, password: string, name: string, email: string) => {
+    setLoading(true);
+    try {
+      const { user } = await Auth.signUp({
+        username: username,
         password,
         attributes: {
-          email,
           name,
-        },
+          email
+        }
       });
     } catch (error) {
       console.error('Registration error:', error);
@@ -141,6 +143,42 @@ const login = async (email: string, password: string) => {
     }
   };
 
+  const verifyAccount = async (username: string, code: string) => {
+    try {
+      await Auth.confirmSignUp(username, code);
+      return true;
+    } catch (error) {
+      console.error('Error confirming sign up', error);
+      throw error;
+    }
+  };
+
+  const resendVerificationCode = async (username: string) => {
+    try {
+      await Auth.resendSignUp(username);
+      return true;
+    } catch (error) {
+      console.error('Error resending code', error);
+      throw error;
+    }
+  };
+
+  const updateUserAttributes = async (attributes: Record<string, string>) => {
+    try {
+      const user = await Auth.currentAuthenticatedUser();
+      await Auth.updateUserAttributes(user, attributes);
+      return true;
+    } catch (error) {
+      console.error('Error updating user attributes:', error);
+      throw error;
+    }
+  };
+
+  // Add this to log user state changes
+  useEffect(() => {
+    console.log("Current user data:", user);
+  }, [user]);
+
   const value = {
     isAuthenticated,
     user,
@@ -151,6 +189,9 @@ const login = async (email: string, password: string) => {
     signOut: logout, // Add signOut alias for logout to match interface requirements
     forgotPassword,
     resetPassword,
+    verifyAccount,
+    resendVerificationCode,
+    updateUserAttributes
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

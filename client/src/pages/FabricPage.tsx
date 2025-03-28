@@ -3,6 +3,7 @@ import { useCart } from '../contexts/CartContext';
 import { fetchFabrics } from '../api/productApi';
 import { ShoppingCart, Filter, X, Plus, Minus, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { getS3ImageUrl } from '../utils/imageUtils';
+import FabricCard from '../components/product/FabricCard';
 
 // Move this function definition before your FabricsPage component:
 
@@ -177,8 +178,10 @@ const FabricsPage = () => {
       }
       
       // Filter by style
-      if (selectedStyles.length > 0 && !fabric.styles.some(s => selectedStyles.includes(s.toLowerCase()))) {
-        return false;
+      if (selectedStyles.length > 0) {
+        if (!fabric.styles || !fabric.styles.some(s => selectedStyles.includes(s.toLowerCase()))) {
+          return false;
+        }
       }
       
       // Filter by price
@@ -311,6 +314,22 @@ const FabricsPage = () => {
   // All possible fabric styles from the data
   const allFabricStyles = [...new Set(fabrics.flatMap((fabric) => fabric.styles.map(s => s.toLowerCase())))];
   
+  // Render fabrics using FabricCard component
+  const renderFabrics = () => {
+    const filteredFabrics = getFilteredFabrics();
+    
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredFabrics.map((fabric) => (
+          <FabricCard 
+            key={fabric.id} 
+            fabric={fabric} 
+            onClick={openCustomization} 
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-12 neutral-50 text-white">
@@ -545,64 +564,7 @@ const FabricsPage = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedFilteredFabrics.map((fabric) => (
-                <div
-                  key={`fabric-${fabric.id}-${fabric.name.replace(/\s+/g, '')}`}
-                  className="bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow border border-gray-700"
-                >
-                  <div className="h-64 overflow-hidden">
-                    <img
-                      src={getS3ImageUrl(getFabricImageKey(fabric.name, fabric.type))}
-                      alt={fabric.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        console.log("Failed to load:", e.currentTarget.src);
-                        console.log("Fabric type:", fabric.type);
-                        e.currentTarget.src = fabric.imageUrl || `/api/placeholder/600/600?text=${fabric.type}`;
-                      }}
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-2 text-white">{fabric.name}</h3>
-                    <p className="text-gray-300 mb-4 h-12 overflow-hidden">
-                      {fabric.description}
-                    </p>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {[
-                        { id: 'type', value: fabric.type },
-                        { id: 'weight', value: fabric.weight },
-                        { id: 'composition', value: fabric.composition }
-                      ].map(item => (
-                        <span 
-                          key={item.id} 
-                          className="bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs"
-                        >
-                          {item.value}
-                        </span>
-                      ))}
-                    </div>
-                    
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-xl font-bold text-teal-400">
-                        ${formatPrice(fabric.pricePerMeter)}/m
-                      </span>
-                      <span className="text-sm text-gray-400">
-                        Min. Order: {fabric.minOrderLength}m
-                      </span>
-                    </div>
-                    
-                    <button
-                      onClick={() => openCustomization(fabric)}
-                      className="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition-colors flex items-center justify-center"
-                    >
-                      <ShoppingCart size={18} className="mr-2" />
-                      Order Fabric
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            renderFabrics()
           )}
         </div>
       </div>

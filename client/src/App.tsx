@@ -8,6 +8,8 @@ import Footer from './components/layout/Footer';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Chatbot from './components/common/Chatbot';
 import { HelmetProvider } from 'react-helmet-async';
+import VerifyAccountPage from './pages/VerifyAccountPage';
+import AccountPage from './pages/AccountPage';
 
 
 
@@ -15,7 +17,7 @@ import { HelmetProvider } from 'react-helmet-async';
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ClothingPage = lazy(() => import('./pages/ClothingPage'));
 const ClothingDetailPage = lazy(() => import('./pages/ClothingDetailPage'));
-const FabricsPage = lazy(() => import('./pages/FabricsPage'));
+const FabricsPage = lazy(() => import('./pages/FabricPage'));
 const FabricDetailPage = lazy(() => import('./pages/FabricDetailPage'));
 const LogoGeneratorPage = lazy(() => import('./pages/LogoGeneratorPage'));
 const ContactUsPage = lazy(() => import('./pages/ContactUsPage'));
@@ -54,6 +56,8 @@ function App() {
                       <Route path="/cart" element={<CartPage />} />
                       <Route path="/checkout" element={<CheckoutPage />} />
                       <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+                      <Route path="/verify-account" element={<VerifyAccountPage />} />
+                      <Route path="/account" element={<AccountPage />} />
                       <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                   </Suspense>

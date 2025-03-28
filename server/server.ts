@@ -3,7 +3,10 @@ import mongoose from 'mongoose';
 import config from './src/config';
 
 // Define port
-const PORT = config.port || 3000;
+const PORT = config.port || 5000;
+
+// Get API key from environment variables
+const apiKey = process.env.STABILITY_API_KEY;
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -20,7 +23,12 @@ const connectDB = async () => {
 connectDB().then(() => {
   // Start the server
   const server = app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log(`
+      🚀 Server is running!
+      🔉 Listening on port ${PORT}
+      📭 API endpoint: http://localhost:${PORT}/api
+      🔑 Using Stability AI key: ${apiKey ? '✓ Key provided' : '✗ Missing key'}
+    `);
   });
 
   // Handle unhandled promise rejections

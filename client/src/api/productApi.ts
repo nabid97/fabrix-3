@@ -135,6 +135,83 @@ export const fetchProductById = async (id: string) => {
 };
 
 /**
+ * Fetch a single clothing product by ID
+ */
+export const fetchClothingProductById = async (id: string): Promise<ClothingProduct> => {
+  try {
+    console.log(`Fetching clothing product with ID: ${id}`);
+    const response = await axios.get(`${API_URL}/products/clothing/${id}`, {
+      timeout: 10000,
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    console.log('API response status:', response.status);
+    
+    if (!response.data) {
+      throw new Error('No product data received');
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    // Enhanced error logging
+    console.error(`Error fetching clothing product with ID ${id}:`, error);
+    
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      
+      if (error.response.status === 404) {
+        throw new Error(`Clothing product with ID ${id} not found`);
+      }
+    } else if (error.request) {
+      console.error('No response received from server');
+      throw new Error('Network error: No response received from server');
+    }
+    
+    throw error;
+  }
+};
+
+/**
+ * Fetch a single fabric product by ID
+ */
+export const fetchFabricProductById = async (id: string): Promise<FabricProduct> => {
+  try {
+    const response = await axios.get(`${API_URL}/products/fabric/${id}`, {
+      timeout: 10000,
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    if (!response.data) {
+      throw new Error('No fabric product data received');
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error(`Error fetching fabric product with ID ${id}:`, error);
+    
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      
+      if (error.response.status === 404) {
+        throw new Error(`Fabric product with ID ${id} not found`);
+      }
+    } else if (error.request) {
+      console.error('No response received from server');
+    }
+    
+    throw error;
+  }
+};
+
+/**
  * Search products
  */
 export const searchProducts = async (query: string) => {

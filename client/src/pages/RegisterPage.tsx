@@ -6,6 +6,7 @@ import { isValidEmail, isValidPassword } from '../utils/validationUtils';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState(''); // Add username state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,12 +29,30 @@ const RegisterPage = () => {
     }
   }, [isAuthenticated, navigate, redirectTo]);
 
+  // Generate username suggestion when email changes
+  useEffect(() => {
+    if (email && !username) {
+      // Create a username from the first part of the email
+      const suggestedUsername = email.split('@')[0];
+      setUsername(suggestedUsername);
+    }
+  }, [email, username]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     // Validate name
     if (!name.trim()) {
       newErrors.name = 'Name is required';
+    }
+
+    // Validate username
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (username.includes('@')) {
+      newErrors.username = 'Username cannot contain @ or be in email format';
+    } else if (username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
     }
 
     // Validate email
@@ -73,11 +92,16 @@ const RegisterPage = () => {
     setIsSubmitting(true);
 
     try {
-      await register(email, password, name);
+      // Pass username instead of email as the first parameter
+      await register(username, password, name, email);
       // Registration successful, navigate to redirectTo
       navigate(redirectTo);
     } catch (error: any) {
-      setApiError(error.message || 'Registration failed. Please try again.');
+      if (error.code === 'UsernameExistsException') {
+        setApiError('This username is already taken. Please choose another.');
+      } else {
+        setApiError(error.message || 'Registration failed. Please try again.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -118,6 +142,32 @@ const RegisterPage = () => {
               placeholder="John Doe"
             />
             {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+          </div>
+
+          {/* Username Field - Add this new field */}
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              Username
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+              className={`appearance-none relative block w-full px-3 py-2 border ${
+                errors.username ? 'border-red-300' : 'border-gray-300'
+              } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm`}
+              placeholder="johndoe123"
+            />
+            {errors.username ? (
+              <p className="mt-1 text-sm text-red-600">{errors.username}</p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-500">
+                You will use this to sign in. Cannot be in email format.
+              </p>
+            )}
           </div>
 
           {/* Email Field */}

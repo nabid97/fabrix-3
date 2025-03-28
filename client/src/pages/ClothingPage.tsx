@@ -3,21 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { fetchClothingProducts } from '../api/productApi';
 import { ShoppingCart, Filter, Upload, X, Check } from 'lucide-react';
-
-// Product Type
-interface ClothingProduct {
-  id: string;
-  name: string;
-  basePrice: number;
-  imageUrl: string;
-  description: string;
-  availableSizes: string[];
-  availableColors: string[];
-  fabricOptions: string[];
-  gender: string[];
-  minOrderQuantity: number;
-  images?: string[]; // Optional array of image URLs
-}
+import ClothingCard from '../components/product/ClothingCard';
+import { ClothingProduct } from '../types/product';
 
 // Color options with hex values
 const colorOptions = [
@@ -99,7 +86,8 @@ const ClothingPage = () => {
       
       try {
         console.log('Attempting to fetch clothing products...');
-        const data = await fetchClothingProducts();
+        const data = await fetchClothingProducts(); // This might be failing
+        console.log('Raw API response:', data); // Add this line
         
         if (data && Array.isArray(data)) {
           setProducts(data);
@@ -109,16 +97,7 @@ const ClothingPage = () => {
         }
       } catch (err: any) {
         console.error('Error loading products:', err);
-        
-        if (err.message === 'Network Error') {
-          setError('Unable to connect to the server. Please check if the backend is running.');
-        } else if (err.code === 'ECONNABORTED') {
-          setError('Request timed out. Please try again later.');
-        } else if (err.response && err.response.status === 404) {
-          setError('API endpoint not found. Check server configuration.');
-        } else {
-          setError(`Failed to load products: ${err.message}`);
-        }
+        // Error handling...
       } finally {
         setLoading(false);
       }
@@ -166,6 +145,9 @@ const ClothingPage = () => {
     
     return true;
   });
+
+  console.log('Products state after fetch:', products);
+  console.log('Filtered products:', filteredProducts);
   
   // Toggle selection of filter items
   const toggleFilter = (
@@ -214,18 +196,6 @@ const ClothingPage = () => {
     reader.readAsDataURL(file);
   };
   
-  // Handle opening the customization modal
-  const openCustomization = (product: ClothingProduct) => {
-    setSelectedProduct(product);
-    // Set default customization values
-    setCustomization(prev => ({
-      ...prev,
-      size: product.availableSizes[0],
-      color: product.availableColors[0],
-      fabric: product.fabricOptions[0],
-      quantity: product.minOrderQuantity
-    }));
-  };
   
   // Handle adding to cart
   const handleAddToCart = () => {
@@ -261,6 +231,87 @@ const ClothingPage = () => {
     // Show success message or redirect to cart
     navigate('/cart');
   };
+
+  const navigateToProduct = (product: ClothingProduct) => {
+    navigate(`/clothing/${product.id}`);
+  };
+
+  // Add this debugging section at the top of your component, before the return statement
+  // Debugging S3 access
+  useEffect(() => {
+    const testS3Access = async () => {
+      const s3Url = 'https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/business-shirt.jpg';
+      
+      console.log('Testing S3 access with:', s3Url);
+      
+      try {
+        // Test if we can load the image
+        const response = await fetch(s3Url, { method: 'HEAD' });
+        console.log('S3 test response status:', response.status);
+        console.log('S3 test response headers:', response.headers);
+        
+        if (response.ok) {
+          console.log('✅ S3 access test successful');
+        } else {
+          console.error('⚠️ S3 access test failed with status:', response.status);
+        }
+      } catch (error) {
+        console.error('⚠️ S3 access test error:', error);
+      }
+    };
+    
+    testS3Access();
+  }, []);
+
+  // Helper function to construct S3 URLs
+  const getS3ImageUrl = (path: string): string => {
+    return `https://fabrix-assets.s3.us-east-1.amazonaws.com/${path}`;
+  };
+
+  // Replace your existing test useEffect with this improved version
+  useEffect(() => {
+    // Test multiple image paths with proper debugging
+    const testAllProductImages = async () => {
+      const testImagePaths = [
+        'clothing/business-shirt.jpg',      // Already working
+        'clothing/classic-tshirt.jpg',      // Need to test
+        'clothing/premium-polo-shirt.jpg',  // Need to test
+        'clothing/pullover-hoodie.jpg',     // Need to test
+        'clothing/quarter-zip-pullover.jpg',// Need to test
+        'clothing/softshell-jacket.jpg',    // Need to test
+        'clothing/structured-cap.jpg',      // Need to test
+        'clothing/performance-vest.jpg'     // Need to test
+      ];
+      
+      console.log('Testing all product images:');
+      
+      // More reliable way to test images
+      for (const path of testImagePaths) {
+        const url = getS3ImageUrl(path);
+        console.log(`Testing image: ${url}`);
+        
+        try {
+          // We'll use fetch instead of Image() to get more detailed errors
+          const response = await fetch(url, { method: 'HEAD' });
+          
+          if (response.ok) {
+            console.log(`✅ Successfully loaded: ${path}`);
+          } else {
+            console.error(`❌ Failed to load: ${path} (Status: ${response.status})`);
+            // Test the image with an Image element as backup
+            const img = new Image();
+            img.onload = () => console.log(`🔄 Image element loaded: ${path}`);
+            img.onerror = () => console.error(`🔄 Image element failed: ${path}`);
+            img.src = url;
+          }
+        } catch (error) {
+          console.error(`❌ Error testing ${path}:`, error);
+        }
+      }
+    };
+    
+    testAllProductImages();
+  }, []);
   
   return (
     <div className="container mx-auto px-4 py-12 bg-gray-900 text-white">
@@ -341,7 +392,7 @@ const ClothingPage = () => {
             <div className="grid grid-cols-5 gap-2">
               {colorOptions.map((color) => (
                 <label
-                  key={color.value}
+                  key={color.value} // Adding a proper key here
                   className={`flex flex-col items-center cursor-pointer`}
                   title={color.name}
                 >
@@ -499,42 +550,11 @@ const ClothingPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
-                >
-                  <div className="h-64 overflow-hidden">
-                    <img
-                      src={product.imageUrl || product.images?.[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Product+Image';
-                      }}
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-2 text-white">{product.name}</h3>
-                    <p className="text-gray-300 mb-4 h-12 overflow-hidden">
-                      {product.description}
-                    </p>
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-xl font-bold text-teal-400">
-                        ${formatPrice(product.basePrice)}
-                      </span>
-                      <span className="text-sm text-gray-400">
-                        Min. Order: {product.minOrderQuantity}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => openCustomization(product)}
-                      className="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition-colors flex items-center justify-center"
-                    >
-                      <ShoppingCart size={18} className="mr-2" />
-                      Customize & Order
-                    </button>
-                  </div>
-                </div>
+                <ClothingCard 
+                  key={product.id} // Add this line to provide a unique key
+                  product={product}
+                  onClick={navigateToProduct}
+                />
               ))}
             </div>
           )}
@@ -724,7 +744,7 @@ const ClothingPage = () => {
                           );
                           return (
                             <label
-                              key={`color-select-${colorName}-${index}`}
+                              key={`color-select-${colorName}-${index}`} // This seems fine but verify
                               className={`border rounded-md p-2 flex flex-col items-center cursor-pointer transition-colors ${
                                 customization.color === colorName
                                   ? 'bg-gray-900 border-teal-500'

@@ -21,6 +21,8 @@ export const generateLogo = async (params: LogoGenerationRequest): Promise<strin
     // Construct the prompt for the AI
     const prompt = constructLogoPrompt(params);
     
+    console.log('Sending logo generation request with prompt:', prompt);
+    
     // Call the API to generate the logo (via our backend proxy)
     const response = await axios.post('/api/logo/generate', {
       prompt,
@@ -31,9 +33,22 @@ export const generateLogo = async (params: LogoGenerationRequest): Promise<strin
     
     // Return the URL of the generated logo
     return response.data.logoUrl;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating logo:', error);
-    throw new Error('Failed to generate logo. Please try again.');
+    
+    // More detailed error logging
+    if (error.response) {
+      console.error('Server response data:', error.response.data);
+      console.error('Server response status:', error.response.status);
+      console.error('Server response headers:', error.response.headers);
+    }
+    
+    // Provide a more helpful error message if possible
+    if (error.response?.data?.message) {
+      throw new Error(`Logo generation failed: ${error.response.data.message}`);
+    } else {
+      throw new Error('Failed to generate logo. Please try again.');
+    }
   }
 };
 

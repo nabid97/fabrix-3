@@ -21,20 +21,23 @@ const connectDB = async () => {
 const S3_BUCKET = process.env.S3_BUCKET || 'fabrix-assets';
 const S3_REGION = process.env.S3_REGION || 'us-east-1';
 
+// Use the standard S3 URL format that doesn't rely on DNS resolution
+const getS3Url = (path: string) => `https://s3.${S3_REGION}.amazonaws.com/${S3_BUCKET}/${path}`;
+
 const updateClothingProductImages = async () => {
   // Connect to database
   await connectDB();
   
-  // Clothing name to image mapping - using name instead of type
+  // Clothing name to image mapping - using direct S3 URL format
   const clothingImages: Record<string, string> = {
-    'Premium Polo Shirt': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/premium-polo-shirt.jpg`,
-    'Business Oxford Shirt': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/business-shirt.jpg`,
-    'Custom T-Shirt': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/classic-tshirt.jpg`,
-    'Branded Hoodie': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/pullover-hoodie.jpg`,
-    'Corporate Softshell Jacket': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/softshell-jacket.jpg`,
-    'Embroidered Cap': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/structured-cap.jpg`,
-    'Quarter-Zip Pullover': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/quarter-zip-pullover.jpg`,
-    'Performance Vest': `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/clothing/performance-vest.jpg`
+    'Premium Polo Shirt': getS3Url('clothing/premium-polo-shirt.jpg'),
+    'Business Oxford Shirt': getS3Url('clothing/business-shirt.jpg'),
+    'Custom T-Shirt': getS3Url('clothing/classic-tshirt.jpg'),
+    'Branded Hoodie': getS3Url('clothing/pullover-hoodie.jpg'),
+    'Corporate Softshell Jacket': getS3Url('clothing/softshell-jacket.jpg'),
+    'Embroidered Cap': getS3Url('clothing/structured-cap.jpg'),
+    'Quarter-Zip Pullover': getS3Url('clothing/quarter-zip-pullover.jpg'),
+    'Performance Vest': getS3Url('clothing/performance-vest.jpg')
   };
   
   try {
@@ -50,8 +53,10 @@ const updateClothingProductImages = async () => {
       
       // Check if we have an image for this product name
       if (clothingImages[productName]) {
-        // Update images array - your schema uses images (plural) not imageUrl
+        // Update the images array
         product.images = [clothingImages[productName]];
+        // If we need imageUrl, we should use a more type-safe approach
+        (product as any).imageUrl = clothingImages[productName]; // Type assertion as a workaround
         await product.save();
         updatedCount++;
         console.log(`✅ Updated images for ${productName}`);

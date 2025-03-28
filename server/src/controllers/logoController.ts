@@ -7,6 +7,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadToS3 } from '../services/aws/s3Service';
 import { generateStabilityAILogo } from '../services/ai/stabilityAIService';
+import axios, { AxiosError } from 'axios'; // Add axios import for error typing
 
 // @desc    Generate logo using Stability AI
 // @route   POST /api/logo/generate
@@ -18,21 +19,48 @@ export const generateLogo = asyncHandler(async (req: Request, res: Response) => 
     throw new ApiError(400, 'Prompt is required');
   }
 
+  // Missing or invalid API key
+  if (!process.env.STABILITY_API_KEY) {
+    throw new Error('Logo generation failed: Missing API key');
+  }
+
+  // Add more detailed logging
+  console.log('Environment check:', { 
+    hasApiKey: !!process.env.STABILITY_API_KEY,
+    keyLength: process.env.STABILITY_API_KEY ? process.env.STABILITY_API_KEY.length : 0,
+    requestDetails: { prompt, style, colorScheme, size }
+  });
+
   try {
     // Generate logo using Stability AI API
-    const logoData = await generateStabilityAILogo(prompt, style, colorScheme, size);
+    const logoResponse = await generateStabilityAILogo(prompt, style, colorScheme, size);
     
+    // Log successful response - use logoResponse instead of undefined 'response'
+    console.log('Stability AI response successful:', {
+      dataReceived: !!logoResponse,
+      dataSize: logoResponse ? Buffer.isBuffer(logoResponse) ? logoResponse.length : 'not a buffer' : 0
+    });
+
     // Upload logo to S3
     const fileName = `logo-${uuidv4()}.png`;
-    const logoUrl = await uploadToS3(logoData, fileName, 'logos');
+    const logoUrl = await uploadToS3(logoResponse, fileName, 'logos');
     
     res.json({
       success: true,
       logoUrl
     });
   } catch (error) {
-    console.error('Logo generation error:', error);
-    throw new ApiError(500, 'Logo generation failed');
+    // Enhanced error logging with proper type handling
+    const typedError = error as Error | AxiosError;
+    
+    console.error('Stability API error details:', {
+      message: typedError?.message || 'Unknown error',
+      response: (typedError as AxiosError)?.response?.data,
+      status: (typedError as AxiosError)?.response?.status
+    });
+    
+    // Rethrow with more details
+    throw new Error(`Logo generation failed: ${typedError.message}`);
   }
 });
 

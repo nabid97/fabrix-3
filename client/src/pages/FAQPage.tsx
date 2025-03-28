@@ -2,18 +2,142 @@ import { useState } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 // FAQ Category type
-interface FAQCategory {
+export interface FAQCategory {
   id: string;
   name: string;
   faqs: FAQ[];
 }
 
 // FAQ type
-interface FAQ {
+export interface FAQ {
   id: string;
   question: string;
   answer: string;
 }
+
+// FAQ data grouped by category - moved outside the component for export
+export const faqCategories: FAQCategory[] = [
+  {
+    id: 'ordering',
+    name: 'Ordering & Payment',
+    faqs: [
+      {
+        id: 'order-minimum',
+        question: 'What is the minimum order quantity for clothing?',
+        answer: 'Our minimum order quantity varies by product, but typically starts at 50 pieces per style and color. This allows us to provide high-quality customization while keeping costs reasonable.',
+      },
+      {
+        id: 'order-time',
+        question: 'How long does it take to fulfill an order?',
+        answer: 'Production time is typically 2-3 weeks after order confirmation and artwork approval. For large orders or custom fabrics, it may take 3-4 weeks. Shipping time depends on your location, but we offer expedited shipping options if you need your order sooner.',
+      },
+      {
+        id: 'payment-methods',
+        question: 'What payment methods do you accept?',
+        answer: 'We accept all major credit cards (Visa, Mastercard, American Express), PayPal, and bank transfers for larger orders. For corporate clients, we also offer net 30 payment terms subject to credit approval.',
+      },
+      {
+        id: 'order-cancel',
+        question: 'Can I cancel or modify my order after placing it?',
+        answer: 'Order modifications or cancellations are possible within 24 hours of placing your order. After this period, once production has begun, we cannot accept cancellations. Please contact our customer service team immediately if you need to make changes.',
+      },
+    ],
+  },
+  {
+    id: 'products',
+    name: 'Products & Customization',
+    faqs: [
+      {
+        id: 'samples-available',
+        question: 'Can I get samples before placing a bulk order?',
+        answer: 'Yes, we offer sample services for a nominal fee. You can order individual samples to check the quality, color, and fit before placing a larger order. Sample costs are credited toward your final order if you proceed with the bulk purchase.',
+      },
+      {
+        id: 'custom-design',
+        question: 'Can I create custom designs with my own logo?',
+        answer: 'Absolutely! You can upload your own logo or use our Logo Generator to create a custom design. We offer various printing and embroidery techniques to apply your logo to the clothing items. Our team will work with you to ensure optimal placement and quality.',
+      },
+      {
+        id: 'fabric-quality',
+        question: 'What is the quality of your fabrics?',
+        answer: 'We source our fabrics from premium suppliers who meet international quality and sustainability standards. Each fabric undergoes rigorous testing for durability, colorfastness, and comfort. Detailed specifications including composition, weight, and care instructions are provided on each product page.',
+      },
+      {
+        id: 'size-guide',
+        question: 'How do I find the right sizes for my order?',
+        answer: 'We provide detailed size charts for each product category. For bulk orders, we recommend ordering samples first to confirm sizing. We also offer size customization for larger orders, including the creation of custom size charts tailored to your specific requirements.',
+      },
+      {
+        id: 'eco-friendly',
+        question: 'Do you offer eco-friendly fabric options?',
+        answer: 'Yes, we offer a range of sustainable and eco-friendly fabrics including organic cotton, recycled polyester, and other environmentally conscious options. These are clearly marked on our product pages, and we can provide certification documentation upon request.',
+      },
+    ],
+  },
+  {
+    id: 'shipping',
+    name: 'Shipping & Delivery',
+    faqs: [
+      {
+        id: 'international-shipping',
+        question: 'Do you ship internationally?',
+        answer: 'Yes, we ship to most countries worldwide. International shipping costs and delivery times vary based on location. You can get an estimate of shipping costs during checkout before completing your purchase.',
+      },
+      {
+        id: 'track-order',
+        question: 'How can I track my order?',
+        answer: 'Once your order ships, you will receive a confirmation email with a tracking number and link. You can also track your order by logging into your account on our website or contacting our customer service team.',
+      },
+      {
+        id: 'shipping-cost',
+        question: 'How are shipping costs calculated?',
+        answer: 'Shipping costs are calculated based on the weight of your order, dimensions, and delivery location. We work with multiple shipping partners to offer you the best rates. For bulk orders, we may split shipments to optimize costs.',
+      },
+    ],
+  },
+  {
+    id: 'returns',
+    name: 'Returns & Exchanges',
+    faqs: [
+      {
+        id: 'return-policy',
+        question: 'What is your return policy?',
+        answer: 'For standard catalog items without customization, we offer a 30-day return policy. Custom orders (including logo printing, embroidery, or custom fabrics) can only be returned if there is a manufacturing defect. All returns must be in original unused condition with tags attached.',
+      },
+      {
+        id: 'defective-items',
+        question: 'What if I receive defective items?',
+        answer: 'If you receive defective items, please contact us within 7 days of delivery with photos of the defects. Our quality control team will review your claim and arrange for replacements or refunds as appropriate, including covering return shipping costs for confirmed defects.',
+      },
+      {
+        id: 'exchange-process',
+        question: 'How does the exchange process work?',
+        answer: 'To request an exchange, contact our customer service team within 30 days of receiving your order. They will guide you through the process and provide a return label if the exchange is due to our error. For size exchanges on custom orders, additional fees may apply.',
+      },
+    ],
+  },
+  {
+    id: 'account',
+    name: 'Account & Privacy',
+    faqs: [
+      {
+        id: 'create-account',
+        question: 'Do I need to create an account to place an order?',
+        answer: 'Yes, an account is required to place orders. This allows us to provide better service, save your order history, and simplify reordering. Creating an account is quick and only requires basic information to get started.',
+      },
+      {
+        id: 'data-privacy',
+        question: 'How is my personal data handled?',
+        answer: 'We take data privacy seriously. Your personal information is encrypted and stored securely. We never share your data with third parties except as required to fulfill your order (such as shipping partners). You can review our complete Privacy Policy for more details.',
+      },
+      {
+        id: 'save-designs',
+        question: 'Can I save my designs for future orders?',
+        answer: 'Yes, when you create a design using our Logo Generator or upload your own designs, they are saved to your account. You can access and reuse them for future orders, making reordering simple and consistent.',
+      },
+    ],
+  },
+];
 
 const FAQPage = () => {
   // State for expanded FAQs
@@ -29,130 +153,6 @@ const FAQPage = () => {
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
-
-  // FAQ data grouped by category
-  const faqCategories: FAQCategory[] = [
-    {
-      id: 'ordering',
-      name: 'Ordering & Payment',
-      faqs: [
-        {
-          id: 'order-minimum',
-          question: 'What is the minimum order quantity for clothing?',
-          answer: 'Our minimum order quantity varies by product, but typically starts at 50 pieces per style and color. This allows us to provide high-quality customization while keeping costs reasonable.',
-        },
-        {
-          id: 'order-time',
-          question: 'How long does it take to fulfill an order?',
-          answer: 'Production time is typically 2-3 weeks after order confirmation and artwork approval. For large orders or custom fabrics, it may take 3-4 weeks. Shipping time depends on your location, but we offer expedited shipping options if you need your order sooner.',
-        },
-        {
-          id: 'payment-methods',
-          question: 'What payment methods do you accept?',
-          answer: 'We accept all major credit cards (Visa, Mastercard, American Express), PayPal, and bank transfers for larger orders. For corporate clients, we also offer net 30 payment terms subject to credit approval.',
-        },
-        {
-          id: 'order-cancel',
-          question: 'Can I cancel or modify my order after placing it?',
-          answer: 'Order modifications or cancellations are possible within 24 hours of placing your order. After this period, once production has begun, we cannot accept cancellations. Please contact our customer service team immediately if you need to make changes.',
-        },
-      ],
-    },
-    {
-      id: 'products',
-      name: 'Products & Customization',
-      faqs: [
-        {
-          id: 'samples-available',
-          question: 'Can I get samples before placing a bulk order?',
-          answer: 'Yes, we offer sample services for a nominal fee. You can order individual samples to check the quality, color, and fit before placing a larger order. Sample costs are credited toward your final order if you proceed with the bulk purchase.',
-        },
-        {
-          id: 'custom-design',
-          question: 'Can I create custom designs with my own logo?',
-          answer: 'Absolutely! You can upload your own logo or use our Logo Generator to create a custom design. We offer various printing and embroidery techniques to apply your logo to the clothing items. Our team will work with you to ensure optimal placement and quality.',
-        },
-        {
-          id: 'fabric-quality',
-          question: 'What is the quality of your fabrics?',
-          answer: 'We source our fabrics from premium suppliers who meet international quality and sustainability standards. Each fabric undergoes rigorous testing for durability, colorfastness, and comfort. Detailed specifications including composition, weight, and care instructions are provided on each product page.',
-        },
-        {
-          id: 'size-guide',
-          question: 'How do I find the right sizes for my order?',
-          answer: 'We provide detailed size charts for each product category. For bulk orders, we recommend ordering samples first to confirm sizing. We also offer size customization for larger orders, including the creation of custom size charts tailored to your specific requirements.',
-        },
-        {
-          id: 'eco-friendly',
-          question: 'Do you offer eco-friendly fabric options?',
-          answer: 'Yes, we offer a range of sustainable and eco-friendly fabrics including organic cotton, recycled polyester, and other environmentally conscious options. These are clearly marked on our product pages, and we can provide certification documentation upon request.',
-        },
-      ],
-    },
-    {
-      id: 'shipping',
-      name: 'Shipping & Delivery',
-      faqs: [
-        {
-          id: 'international-shipping',
-          question: 'Do you ship internationally?',
-          answer: 'Yes, we ship to most countries worldwide. International shipping costs and delivery times vary based on location. You can get an estimate of shipping costs during checkout before completing your purchase.',
-        },
-        {
-          id: 'track-order',
-          question: 'How can I track my order?',
-          answer: 'Once your order ships, you will receive a confirmation email with a tracking number and link. You can also track your order by logging into your account on our website or contacting our customer service team.',
-        },
-        {
-          id: 'shipping-cost',
-          question: 'How are shipping costs calculated?',
-          answer: 'Shipping costs are calculated based on the weight of your order, dimensions, and delivery location. We work with multiple shipping partners to offer you the best rates. For bulk orders, we may split shipments to optimize costs.',
-        },
-      ],
-    },
-    {
-      id: 'returns',
-      name: 'Returns & Exchanges',
-      faqs: [
-        {
-          id: 'return-policy',
-          question: 'What is your return policy?',
-          answer: 'For standard catalog items without customization, we offer a 30-day return policy. Custom orders (including logo printing, embroidery, or custom fabrics) can only be returned if there is a manufacturing defect. All returns must be in original unused condition with tags attached.',
-        },
-        {
-          id: 'defective-items',
-          question: 'What if I receive defective items?',
-          answer: 'If you receive defective items, please contact us within 7 days of delivery with photos of the defects. Our quality control team will review your claim and arrange for replacements or refunds as appropriate, including covering return shipping costs for confirmed defects.',
-        },
-        {
-          id: 'exchange-process',
-          question: 'How does the exchange process work?',
-          answer: 'To request an exchange, contact our customer service team within 30 days of receiving your order. They will guide you through the process and provide a return label if the exchange is due to our error. For size exchanges on custom orders, additional fees may apply.',
-        },
-      ],
-    },
-    {
-      id: 'account',
-      name: 'Account & Privacy',
-      faqs: [
-        {
-          id: 'create-account',
-          question: 'Do I need to create an account to place an order?',
-          answer: 'Yes, an account is required to place orders. This allows us to provide better service, save your order history, and simplify reordering. Creating an account is quick and only requires basic information to get started.',
-        },
-        {
-          id: 'data-privacy',
-          question: 'How is my personal data handled?',
-          answer: 'We take data privacy seriously. Your personal information is encrypted and stored securely. We never share your data with third parties except as required to fulfill your order (such as shipping partners). You can review our complete Privacy Policy for more details.',
-        },
-        {
-          id: 'save-designs',
-          question: 'Can I save my designs for future orders?',
-          answer: 'Yes, when you create a design using our Logo Generator or upload your own designs, they are saved to your account. You can access and reuse them for future orders, making reordering simple and consistent.',
-        },
-      ],
-    },
-  ];
 
   // Flatten all FAQs for search
   const allFAQs = faqCategories.flatMap((category) => category.faqs);
