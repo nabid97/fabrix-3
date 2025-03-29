@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
-import { IOrder } from '../../models/Order';
 import config from '../../config';
+import { IOrder } from '../../models/Order';
 import { loadEmailTemplate } from './emailTemplates';
 
 // Create reusable transporter
@@ -16,61 +16,66 @@ const transporter = nodemailer.createTransport({
 
 /**
  * Send order confirmation email to customer
- * @param order - Order details
- * @param email - Customer email
+ * @param recipientEmail - Customer email
+ * @param orderData - Order details
  */
-export const sendOrderConfirmationEmail = async (order: IOrder, email: string): Promise<void> => {
+export const sendOrderConfirmationEmail = async (
+  recipientEmail: string,
+  orderData: {
+    firstName: string;
+    orderNumber: string;
+    items: any[];
+    shipping: any;
+    payment: any;
+  }
+): Promise<void> => {
   try {
-    // Load template and replace placeholders
-    const template = loadEmailTemplate('orderConfirmation');
-    const orderDate = new Date(order.createdAt).toLocaleDateString();
-    
-    // Calculate order summary
-    const subtotal = order.payment.subtotal.toFixed(2);
-    const shipping = order.payment.shipping.toFixed(2);
-    const tax = order.payment.tax.toFixed(2);
-    const total = order.payment.total.toFixed(2);
-    
-    // Generate items HTML
-    const itemsHtml = order.items.map(item => `
-      <tr>
-        <td style="padding: 10px;">${item.name}</td>
-        <td style="padding: 10px; text-align: center;">${item.quantity}</td>
-        <td style="padding: 10px; text-align: right;">$${item.price.toFixed(2)}</td>
-      </tr>
-    `).join('');
-    
-    // Replace placeholders in template
+    // Get the order confirmation email template
+    const template = getOrderConfirmationTemplate();
+
+    // Format the items for the email
+    const itemsList = orderData.items.map(item => 
+      `<tr>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.quantity}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">$${item.price.toFixed(2)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">$${(item.price * item.quantity).toFixed(2)}</td>
+      </tr>`
+    ).join('');
+
+    // Calculate order totals
+    const subtotal = orderData.payment.subtotal?.toFixed(2) || '0.00';
+    const shipping = orderData.payment.shipping?.toFixed(2) || '0.00';
+    const tax = orderData.payment.tax?.toFixed(2) || '0.00';
+    const total = orderData.payment.total?.toFixed(2) || '0.00';
+
+    // Replace placeholders in the template
     const html = template
-      .replace('{{orderNumber}}', order.orderNumber)
-      .replace('{{orderDate}}', orderDate)
-      .replace('{{customerName}}', `${order.customer.firstName} ${order.customer.lastName}`)
-      .replace('{{items}}', itemsHtml)
-      .replace('{{subtotal}}', `$${subtotal}`)
-      .replace('{{shipping}}', `$${shipping}`)
-      .replace('{{tax}}', `$${tax}`)
-      .replace('{{total}}', `$${total}`)
-      .replace('{{shippingAddress}}', 
-        `${order.shipping.address1}, 
-         ${order.shipping.address2 ? order.shipping.address2 + ', ' : ''} 
-         ${order.shipping.city}, ${order.shipping.state} ${order.shipping.zipCode}, 
-         ${order.shipping.country}`
-      )
-      .replace('{{shippingMethod}}', order.shipping.method);
-    
-    // Send email
+      .replace('{{firstName}}', orderData.firstName)
+      .replace('{{orderNumber}}', orderData.orderNumber)
+      .replace('{{items}}', itemsList)
+      .replace('{{subtotal}}', subtotal)
+      .replace('{{shipping}}', shipping)
+      .replace('{{tax}}', tax)
+      .replace('{{total}}', total)
+      .replace('{{shippingAddress}}', `
+        ${orderData.shipping.address1}<br>
+        ${orderData.shipping.address2 ? orderData.shipping.address2 + '<br>' : ''}
+        ${orderData.shipping.city}, ${orderData.shipping.state} ${orderData.shipping.zipCode}<br>
+        ${orderData.shipping.country}
+      `);
+
+    // Send the email
     await transporter.sendMail({
       from: `"FabriX" <${config.email.from}>`,
-      to: email,
-      subject: `Your FabriX Order #${order.orderNumber} Confirmation`,
+      to: recipientEmail,
+      subject: `Your Order Confirmation #${orderData.orderNumber}`,
       html,
-      text: `Thank you for your order! Order #${order.orderNumber} has been confirmed.`,
+      text: `Thank you for your order #${orderData.orderNumber}. We'll notify you once your order has shipped.`,
     });
-
-    console.log(`Order confirmation email sent to ${email}`);
   } catch (error) {
     console.error('Error sending order confirmation email:', error);
-    // Don't throw error to prevent disrupting the order process
+    throw new Error('Failed to send order confirmation email');
   }
 };
 
@@ -167,4 +172,90 @@ export const sendContactFormConfirmation = async (
     console.error('Error sending contact form confirmation email:', error);
     throw error;
   }
+};
+
+// Add this function to your emailService.ts file
+
+const getOrderConfirmationTemplate = (): string => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Order Confirmation</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .logo { text-align: center; margin-bottom: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 10px; text-align: center; }
+        .footer { background-color: #f1f1f1; padding: 10px; text-align: center; font-size: 12px; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { background-color: #f1f1f1; text-align: left; padding: 8px; }
+        .total-row { font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="logo">
+          <img src="https://yourwebsite.com/logo.png" alt="FabriX Logo" style="max-width: 150px;">
+        </div>
+        <div class="header">
+          <h1>Order Confirmation</h1>
+        </div>
+        
+        <p>Hello {{firstName}},</p>
+        
+        <p>Thank you for your order! We've received your order and are working on it now. Here's a summary of your purchase:</p>
+        
+        <h2>Order #{{orderNumber}}</h2>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{items}}
+          </tbody>
+        </table>
+        
+        <table>
+          <tr>
+            <td style="text-align: right;">Subtotal:</td>
+            <td style="text-align: right; width: 100px;">\${{subtotal}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: right;">Shipping:</td>
+            <td style="text-align: right;">\${{shipping}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: right;">Tax:</td>
+            <td style="text-align: right;">\${{tax}}</td>
+          </tr>
+          <tr class="total-row">
+            <td style="text-align: right;">Total:</td>
+            <td style="text-align: right;">\${{total}}</td>
+          </tr>
+        </table>
+        
+        <h3>Shipping Address</h3>
+        <p>{{shippingAddress}}</p>
+        
+        <p>We'll send you another email when your order ships. If you have any questions, please contact our customer service at support@fabrix.com.</p>
+        
+        <p>Thank you for shopping with us!</p>
+        
+        <p>Best regards,<br>The FabriX Team</p>
+        
+        <div class="footer">
+          <p>&copy; 2025 FabriX. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
 };

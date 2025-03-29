@@ -1,4 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { Request, Response } from 'express';
+import asyncHandler from 'express-async-handler';
+import axios, { AxiosResponse, AxiosError } from 'axios';
 
 // Order item interface
 export interface IOrderItem {
@@ -200,35 +203,109 @@ const paymentInfoSchema = new Schema<IPaymentInfo>({
 });
 
 // Order schema
-const orderSchema = new Schema<IOrder>(
-  {
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+const orderSchema = new mongoose.Schema({
+  orderNumber: { type: String, required: true, unique: true }, // Add this line
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Optional
+  items: [
+    {
+      id: { type: String, required: true },
+      name: { type: String, required: true },
+      type: { type: String }, // Optional
+      price: { type: Number, required: true },
+      quantity: { type: Number, required: true },
+      imageUrl: { type: String }, // Optional
+      product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: false }, // Make this optional
     },
-    orderNumber: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    items: [orderItemSchema],
-    customer: customerInfoSchema,
-    shipping: shippingInfoSchema,
-    payment: paymentInfoSchema,
-    status: {
-      type: String,
-      required: true,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
-      default: 'pending',
-    },
-    notes: String,
+  ],
+  customer: {
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String }, // Optional
   },
-  {
-    timestamps: true,
-  }
-);
+  shipping: {
+    address1: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    zipCode: { type: String, required: true },
+    country: { type: String, required: true },
+    method: { type: String }, // Optional
+  },
+  payment: {
+    method: { type: String, required: false }, // Make it optional
+    total: { type: Number, required: true },
+    tax: { type: Number },
+    shipping: { type: Number },
+    subtotal: { type: Number },
+    paymentMethodId: { type: String },
+  },
+  notes: { type: String },
+  status: { type: String, default: 'pending' },
+  createdAt: { type: Date, default: Date.now },
+});
 
 const Order = mongoose.model<IOrder>('Order', orderSchema);
 
+export const createOrder = asyncHandler(async (req: Request, res: Response) => {
+  console.log('Request body received by backend:', req.body);
+  const { items, customer, shipping, payment, notes } = req.body;
+
+  // Generate a unique order number
+  const orderNumber = generateOrderNumber();
+  console.log('Generated Order Number:', orderNumber);
+
+  // Provide default values for optional fields
+  const orderData = {
+    orderNumber, // Add the generated order number
+    items: items.map((item: {
+      id: string;
+      name: string;
+      type?: string;
+      price: number;
+      quantity: number;
+      imageUrl?: string;
+      product?: mongoose.Types.ObjectId | null;
+    }) => ({
+      ...item,
+      type: item.type || 'default',
+      imageUrl: item.imageUrl || 'https://example.com/default.jpg',
+      product: item.product || null,
+    })),
+    customer: {
+      ...customer,
+      phone: customer.phone || 'N/A',
+    },
+    shipping: {
+      ...shipping,
+      method: shipping.method || 'standard',
+    },
+    payment: {
+      ...payment,
+      method: payment.method || 'credit_card',
+      tax: payment.tax || 0,
+      shipping: payment.shipping || 0,
+      subtotal: payment.subtotal || payment.total,
+      paymentMethodId: payment.paymentMethodId || 'N/A',
+    },
+    notes: notes || '',
+  };
+
+  console.log('Order data being saved to database:', orderData);
+
+  // Create and save the order
+  const newOrder = new Order(orderData);
+  const savedOrder = await newOrder.save();
+
+  // Return the response
+  res.status(201).json({ success: true, order: savedOrder });
+});
+
 export default Order;
+
+// Assuming this is in /home/nabz/fabrix-3/server/src/utils/generateOrderNumber.ts
+export const generateOrderNumber = (): string => {
+  const prefix = 'ORD';
+  const timestamp = Date.now().toString().slice(-10);
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `${prefix}-${timestamp}-${random}`;
+};

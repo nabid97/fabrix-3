@@ -118,6 +118,11 @@ const Header: React.FC = () => {
               
               <Link to="/contact" className="text-gray-700 hover:text-teal-600 font-medium">Contact</Link>
               <Link to="/faq" className="text-gray-700 hover:text-teal-600 font-medium">FAQ</Link>
+
+              {/* Order History Link */}
+              {isAuthenticated && (
+                <Link to="/order-history" className="text-gray-700 hover:text-teal-600 font-medium">Order History</Link>
+              )}
             </nav>
 
             {/* Actions */}
@@ -214,57 +219,32 @@ const Header: React.FC = () => {
           
           <div className="space-y-4">
             <p className="font-bold text-gray-700">Categories</p>
-            <Link 
-              to="/clothing" 
-              className="block ml-4 text-gray-600 hover:text-teal-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Clothing
-            </Link>
-            <Link 
-              to="/fabrics" 
-              className="block ml-4 text-gray-600 hover:text-teal-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Fabrics
-            </Link>
-            <Link 
-              to="/logo-generator" 
-              className="block ml-4 text-gray-600 hover:text-teal-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Logo Generator
-            </Link>
+            <Link to="/clothing" className="block ml-4 text-gray-600 hover:text-teal-600">Clothing</Link>
+            <Link to="/fabrics" className="block ml-4 text-gray-600 hover:text-teal-600">Fabrics</Link>
+            <Link to="/logo-generator" className="block ml-4 text-gray-600 hover:text-teal-600">Logo Generator</Link>
           </div>
           
-          <Link to="/contact" className="block text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Contact</Link>
-          <Link to="/faq" className="block text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>FAQ</Link>
+          <Link to="/contact" className="block text-lg font-medium">Contact</Link>
+          <Link to="/faq" className="block text-lg font-medium">FAQ</Link>
+          
+          {/* Order History Link */}
+          {isAuthenticated && (
+            <Link to="/order-history" className="block text-lg font-medium">Order History</Link>
+          )}
           
           <div className="pt-6 mt-6 border-t border-gray-200">
             {isAuthenticated ? (
-              <Link 
-                to="/account" 
-                className="flex items-center py-2 text-gray-600 hover:text-teal-600"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <Link to="/account" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
                 <User size={20} className="mr-2" />
                 My Account
               </Link>
             ) : (
-              <Link 
-                to="/login" 
-                className="flex items-center py-2 text-gray-600 hover:text-teal-600"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <Link to="/login" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
                 <User size={20} className="mr-2" />
                 Sign In
               </Link>
             )}
-            <Link 
-              to="/cart" 
-              className="flex items-center py-2 text-gray-600 hover:text-teal-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
+            <Link to="/cart" className="flex items-center py-2 text-gray-600 hover:text-teal-600">
               <ShoppingBag size={20} className="mr-2" />
               Cart ({itemCount})
             </Link>

@@ -20,15 +20,7 @@ interface FAQCategory {
 }
 
 // Fallback responses for common questions
-const fallbackResponses: Record<string, string> = {
-  greeting: "Hello! Welcome to FabriX. How can I help you today?",
-  fabric: "We offer premium fabrics including cotton, silk, linen, and synthetic blends. Our fabrics come with minimum order quantities. Would you like more specific information?",
-  clothing: "Our custom clothing services include design, sampling, and bulk production with minimum orders of 50 pieces. We specialize in corporate and fashion brand requirements.",
-  shipping: "We ship worldwide. Domestic orders typically arrive in 5-10 business days, while international shipping may take 10-20 business days depending on the destination.",
-  returns: "We accept returns on non-customized items within 30 days of delivery. Custom orders cannot be returned unless defective.",
-  contact: "You can contact our customer service team at support@fabrix.com or call us at +1 (555) 123-4567 during business hours 9am-5pm EST.",
-  pricing: "Our pricing depends on quantity, fabric type, and customization requirements. We can provide a detailed quote after understanding your specific needs.",
-};
+// Removed unused fallbackResponses to resolve the compile error
 
 /**
  * Generate AI response using Gemini API

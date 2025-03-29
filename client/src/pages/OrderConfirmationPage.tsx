@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { getOrderDetails } from '../api/orderApi';
 import { CheckCircle, ArrowRight, Printer, Mail, Package, Clock } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -66,6 +66,8 @@ const OrderConfirmationPage: React.FC = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { orderData } = useLocation().state || {};
+  const orderNumber = orderData?.orderNumber;
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -85,8 +87,26 @@ const OrderConfirmationPage: React.FC = () => {
       }
     };
 
-    fetchOrderDetails();
-  }, [orderId]);
+    // If we have order data from the redirect, use that
+    if (orderData) {
+      setOrder(orderData);
+      // Save the order number to localStorage for later reference
+      localStorage.setItem('lastOrderNumber', orderData.orderNumber);
+    } 
+    // Otherwise try to fetch it if we have an order number
+    else if (orderNumber) {
+      fetch(`/api/orders/number/${orderNumber}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setOrder(data.order);
+          }
+        })
+        .catch(err => console.error('Error fetching order:', err));
+    } else {
+      fetchOrderDetails();
+    }
+  }, [orderId, orderData, orderNumber]);
 
   const handlePrint = () => {
     window.print();

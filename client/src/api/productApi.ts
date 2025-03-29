@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Set the base API URL based on environment
-const API_URL = '/api';  // This will use the proxy settings in package.json
+const API_URL = 'http://localhost:5000/api';  // This will use the proxy settings in package.json
 
 // Product interfaces
 export interface ClothingProduct {
@@ -96,24 +96,23 @@ export const fetchClothingProducts = async (): Promise<ClothingProduct[]> => {
 /**
  * Fetch fabric products
  */
-export const fetchFabricProducts = async (): Promise<FabricProduct[]> => {
+export const fetchFabricProducts = async () => {
   try {
-    const response = await axios.get(`${API_URL}/products/fabric`, {
-      timeout: 10000,
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error('Error fetching fabric products:', error);
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-    } else if (error.request) {
-      console.error('No response received');
+    const response = await fetch(`${API_URL}/products/fabric`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch fabric products');
     }
+
+    // Ensure `data` is an array
+    if (!Array.isArray(result.data)) {
+      throw new Error('API response is not an array');
+    }
+
+    return result.data; // Return the array of fabric products
+  } catch (error) {
+    console.error('Error fetching fabric products:', error);
     throw error;
   }
 };

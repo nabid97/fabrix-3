@@ -8,46 +8,17 @@ import { generateOrderNumber } from '../utils/generateOrderNumber';
 
 // @desc    Create new order
 // @route   POST /api/orders
-// @access  Private
-export const createOrder = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { items, customer, shipping, payment, notes } = req.body;
+// @access  Public
+export const createOrder = asyncHandler(async (req: Request, res: Response) => {
+  const orderData = { ...req.body, orderNumber: generateOrderNumber() };
 
-  if (!items || items.length === 0) {
-    throw new ApiError(400, 'No order items');
-  }
+  const newOrder = new Order(orderData);
+  const savedOrder = await newOrder.save();
 
-  const orderNumber = generateOrderNumber();
-
-  const order = await Order.create({
-    orderNumber,
-    user: req.user?._id,
-    items: items.map((item: any) => {
-      if (!item.id || typeof item.id !== 'string') {
-        throw new ApiError(400, 'Invalid item ID');
-      }
-      const productId = item.id.split('-')[0];
-      return {
-        ...item,
-        product: productId,
-      };
-    }),
-    customer,
-    shipping,
-    payment: {
-      paymentMethodId: payment.paymentMethodId,
-      subtotal: payment.subtotal,
-      shipping: payment.shipping,
-      tax: payment.tax,
-      total: payment.total,
-      isPaid: false,
-      paidAt: null,
-    },
-    notes,
+  res.status(201).json({
+    success: true,
+    order: savedOrder,
   });
-
-  await sendOrderConfirmationEmail(order, customer.email);
-
-  res.status(201).json(order);
 });
 
 // @desc    Get all orders
@@ -83,20 +54,15 @@ export const getOrders = asyncHandler(async (req: AuthRequest, res: Response) =>
 // @desc    Get order by ID
 // @route   GET /api/orders/:id
 // @access  Private
-export const getOrderById = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const order = await Order.findById(req.params.id);
-  
+export const getOrderById = asyncHandler(async (req: Request, res: Response) => {
+  const order = await Order.findById(req.params.id).populate('user', 'name email');
+
   if (!order) {
+    res.status(404);
     throw new ApiError(404, 'Order not found');
   }
-  
-  // Check if the user is authorized to view this order
-  if (!req.user?.isAdmin && order.user.toString() !== req.user?._id?.toString()) {
 
-  throw new ApiError(403, 'Not authorized to view this order');
-  }
-  
-  res.json(order);
+  res.status(200).json(order);
 });
 
 // @desc    Update order to paid
@@ -158,13 +124,46 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
 // @route   GET /api/orders/number/:orderNumber
 // @access  Public
 export const getOrderByNumber = asyncHandler(async (req: Request, res: Response) => {
-  const order = await Order.findOne({ orderNumber: req.params.orderNumber });
+  const orderNumber = req.params.orderNumber;
+  
+  const order = await Order.findOne({ orderNumber });
   
   if (!order) {
-    throw new ApiError(404, 'Order not found');
+    return res.status(404).json({ 
+      success: false, 
+      message: 'Order not found' 
+    });
   }
   
-  res.json(order);
+  // Return detailed order information (exclude sensitive data)
+  return res.json({
+    success: true,
+    order: {
+      _id: order._id,
+      orderNumber: order.orderNumber,
+      createdAt: order.createdAt,
+      status: order.status,
+      items: order.items,
+      customer: {
+        firstName: order.customer.firstName,
+        lastName: order.customer.lastName,
+        email: order.customer.email,
+        phone: order.customer.phone,
+        company: order.customer.company
+      },
+      shipping: order.shipping,
+      payment: {
+        subtotal: order.payment.subtotal,
+        shipping: order.payment.shipping,
+        tax: order.payment.tax,
+        total: order.payment.total,
+        cardBrand: order.payment.cardBrand,
+        lastFour: order.payment.lastFour
+        // Exclude sensitive payment data
+      },
+      notes: order.notes
+    }
+  });
 });
 
 // @desc    Get user orders

@@ -1,9 +1,9 @@
-import app from './src/app';
+import {app}from './src/app';
 import mongoose from 'mongoose';
-import config from './src/config';
+import listEndpoints from 'express-list-endpoints';
 
 // Define port
-const PORT = config.port || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
 // Get API key from environment variables
 const apiKey = process.env.STABILITY_API_KEY;
@@ -11,9 +11,9 @@ const apiKey = process.env.STABILITY_API_KEY;
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(config.mongoURI);
+    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://nabid1997:Hesoyam@fabrix.eajok.mongodb.net/?retryWrites=true&w=majority&appName=fabrix',);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error: any) { // Add type annotation here
+  } catch (error: any) {
     console.error(`Error: ${error.message}`);
     process.exit(1);
   }
@@ -31,11 +31,27 @@ connectDB().then(() => {
     `);
   });
 
+  // Properly typed route logger for TypeScript
+  app._router.stack.forEach((middleware: any) => {
+    if (middleware.route) {
+      const methods = Object.keys(middleware.route.methods)
+        .filter((method) => middleware.route.methods[method])
+        .join(', ')
+        .toUpperCase();
+      console.log(`${methods} ${middleware.route.path}`);
+    }
+  });
+
+  // Log all registered routes
+  console.log('\n=== REGISTERED ROUTES ===');
+  console.log(listEndpoints(app));
+  console.log('========================\n');
+
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', (err: Error) => { // Add type annotation here
+  process.on('unhandledRejection', (err: Error) => {
     console.error('UNHANDLED REJECTION! 💥 Shutting down...');
     console.error(err);
-    
+
     // Close server & exit process
     server.close(() => {
       process.exit(1);

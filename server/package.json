@@ -30,6 +30,8 @@
     "license": "MIT",
     "dependencies": {
         "@google/generative-ai": "^0.24.0",
+        "@stripe/react-stripe-js": "^3.5.1",
+        "@stripe/stripe-js": "^6.1.0",
         "aws-sdk": "^2.1534.0",
         "axios": "^1.8.2",
         "bcryptjs": "^2.4.3",

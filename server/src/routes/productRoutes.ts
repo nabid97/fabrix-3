@@ -14,20 +14,15 @@ import { protect, admin } from '../middleware/authMiddleware';
 const router = express.Router();
 
 // Public routes
-router.route('/')
-  .get(getProducts);
+router.get('/', getProducts);
+router.get('/clothing', getClothingProducts);
+router.get('/fabric', getFabricProducts);
+router.get('/:id', getProductById);
 
-router.route('/clothing')
-  .get(getClothingProducts)
-  .post(protect, admin, createClothingProduct);
-
-router.route('/fabric')
-  .get(getFabricProducts)
-  .post(protect, admin, createFabricProduct);
-
-router.route('/:id')
-  .get(getProductById)
-  .put(protect, admin, updateProduct)
-  .delete(protect, admin, deleteProduct);
+// Admin routes
+router.post('/clothing', protect, admin, createClothingProduct);
+router.post('/fabric', protect, admin, createFabricProduct);
+router.put('/:id', protect, admin, updateProduct);
+router.delete('/:id', protect, admin, deleteProduct);
 
 export default router;

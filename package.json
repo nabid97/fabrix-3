@@ -44,12 +44,13 @@
   "author": "FabriX Team",
   "license": "MIT",
   "devDependencies": {
+    "@types/dotenv": "^8.2.3",
+    "@types/jest": "^29.5.0",
     "concurrently": "^8.2.2",
     "husky": "^8.0.3",
-    "lint-staged": "^15.1.0",
     "jest": "^29.6.0",
-    "ts-jest": "^29.1.0",
-    "@types/jest": "^29.5.0"
+    "lint-staged": "^15.1.0",
+    "ts-jest": "^29.1.0"
   },
   "husky": {
     "hooks": {
@@ -66,10 +67,14 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
+    "@types/jsonwebtoken": "^9.0.9",
     "axios": "^1.8.2",
     "compression": "^1.8.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express-list-endpoints": "^7.1.1",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "oidc-client-ts": "^3.1.0",
     "react-helmet-async": "^2.0.5",

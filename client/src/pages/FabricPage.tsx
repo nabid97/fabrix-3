@@ -72,7 +72,7 @@ const colorOptions = [
 type SortOption = 'name' | 'pricePerMeter' | 'type';
 type SortDirection = 'asc' | 'desc';
 
-const FabricsPage = () => {
+const FabricPage = () => {
   const { addItem } = useCart();
   
   // Fabric state
@@ -96,7 +96,7 @@ const FabricsPage = () => {
   const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
   const [customization, setCustomization] = useState({
     color: '',
-    length: 1,
+    length: 1, // Default to 1 meter
     notes: '',
   });
   
@@ -134,15 +134,15 @@ const FabricsPage = () => {
         const data = await fetchFabrics();
         
         // Transform data before setting it to state
-        const formattedData = data.map(fabric => ({
-          id: fabric.id,
+        const formattedData = data.map((fabric: any) => ({
+          id: fabric._id, // Use `_id` from the API response
           name: fabric.name,
           type: fabric.type || 'fabric',
-          pricePerMeter: fabric.pricePerMeter,
-          imageUrl: fabric.imageUrl || '',
+          pricePerMeter: fabric.price || 0, // Map `price` to `pricePerMeter`
+          imageUrl: fabric.images?.[0] || '', // Use the first image if available
           description: fabric.description || '',
           availableColors: fabric.availableColors || ['White', 'Black'],
-          styles: fabric.styles || ['Regular'], // This ensures styles is always an array
+          styles: fabric.styles || ['Regular'], // Ensure styles is always an array
           composition: Array.isArray(fabric.composition) 
             ? fabric.composition.join(', ') 
             : fabric.composition || 'Unknown',
@@ -282,10 +282,14 @@ const FabricsPage = () => {
   // Handle adding to cart
   const handleAddToCart = () => {
     if (!selectedFabric) return;
-    
-    // Calculate total price based on length
-    const totalPrice = selectedFabric.pricePerMeter * customization.length;
-    
+  
+    // Ensure pricePerMeter and length are valid numbers
+    const pricePerMeter = selectedFabric.pricePerMeter || 0;
+    const length = customization.length || 1;
+  
+    // Calculate total price
+    const totalPrice = pricePerMeter * length;
+  
     // Create cart item
     const cartItem = {
       id: `${selectedFabric.id}-${Date.now()}`,
@@ -296,14 +300,14 @@ const FabricsPage = () => {
       imageUrl: getS3ImageUrl(getFabricImageKey(selectedFabric.name, selectedFabric.type)), // Use S3 URL
       fabricType: selectedFabric.type,
       color: customization.color,
-      length: customization.length,
+      length: length,
       fabricStyle: selectedFabric.styles[0],
-      notes: customization.notes
+      notes: customization.notes,
     };
-    
+  
     // Add to cart
     addItem(cartItem);
-    
+  
     // Close modal
     setSelectedFabric(null);
   };
@@ -752,7 +756,9 @@ const FabricsPage = () => {
                       </div>
                       <div className="flex justify-between items-center font-bold text-lg border-t border-gray-700 pt-2 mt-2">
                         <span className="text-white">Total Price:</span>
-                        <span className="text-teal-400">${formatPrice(selectedFabric.pricePerMeter * customization.length)}</span>
+                        <span className="text-teal-400">
+                          ${formatPrice((selectedFabric.pricePerMeter || 0) * (customization.length || 1))}
+                        </span>
                       </div>
                     </div>
                     
@@ -790,4 +796,4 @@ const FabricsPage = () => {
   );
 };
 
-export default FabricsPage;
+export default FabricPage;

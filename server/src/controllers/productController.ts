@@ -196,10 +196,30 @@ export const getClothingProducts = asyncHandler(async (req: Request, res: Respon
 // @desc    Fetch fabric products
 // @route   GET /api/products/fabric
 // @access  Public
-export const getFabricProducts = asyncHandler(async (req: Request, res: Response) => {
-  const products = await FabricProduct.find({ isActive: true });
-  res.json(products);
-});
+export const getFabricProducts = async (req: Request, res: Response) => {
+  try {
+    const fabricProducts = await Product.find({ type: 'fabric' });
+    if (!fabricProducts) {
+      return res.status(404).json({
+        success: false,
+        message: 'No fabric products found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: fabricProducts.length,
+      data: fabricProducts,
+    });
+  } catch (error) {
+    console.error('Error fetching fabric products:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch fabric products',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
 
 // @desc    Fetch fabrics
 // @route   GET /api/fabrics

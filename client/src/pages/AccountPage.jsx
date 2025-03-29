@@ -329,6 +329,17 @@ const fetchUserProfile = async () => {
                   <CreditCard className="mr-3 h-5 w-5" />
                   <span>Billing</span>
                 </button>
+                {/* Logout Button */}
+                <button
+                  onClick={async () => {
+                    await logout(); // Call the logout function
+                    navigate('/login'); // Redirect to the login page after logout
+                  }}
+                  className="flex items-center px-3 py-2 w-full text-left rounded-md text-gray-700 hover:bg-gray-100"
+                >
+                  <AlertCircle className="mr-3 h-5 w-5 text-red-600" />
+                  <span className="text-red-600">Logout</span>
+                </button>
               </nav>
             </div>
 

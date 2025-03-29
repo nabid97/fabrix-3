@@ -197,8 +197,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Remove or comment out this line if you're using the named export
-// export default AuthContext;
-
-// Or keep this line if you want to export both:
 export default AuthContext;

@@ -13,7 +13,7 @@ import {
 import {AlertCircle, CreditCard, ChevronLeft } from 'lucide-react';
 
 // Initialize Stripe (in a real app, use your publishable key)
-const stripePromise = loadStripe('pk_test_your_stripe_publishable_key_here');
+const stripePromise = loadStripe('pk_test_51Qw9JaJkWEUWirtQuqP7laPdPbHxttgx9pxpdPI2CxazHZHN1026l94PrrXNYFV2SgsCfp87sYfiIBGgFKRa0Prx00JmPOtbra');
 
 // Shipping method option type
 interface ShippingMethod {
@@ -84,7 +84,7 @@ const cardElementOptions = {
 };
 
 // Checkout form component with Stripe integration
-const CheckoutForm = () => {
+const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
   const { items, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -113,6 +113,7 @@ const CheckoutForm = () => {
   const [processing, setProcessing] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   
   // Calculate order summary
   const selectedShipping = shippingMethods.find(
@@ -159,28 +160,19 @@ const CheckoutForm = () => {
     
     try {
       // Create payment method with Stripe
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-        billing_details: {
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          phone: formData.phone,
-          address: {
-            line1: formData.address1,
-            line2: formData.address2,
-            city: formData.city,
-            state: formData.state,
-            postal_code: formData.zipCode,
-            country: formData.country,
-          },
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
         },
       });
-      
+
       if (error) {
         setCardError(error.message || 'An error occurred with your credit card');
         setProcessing(false);
         return;
+      } else if (paymentIntent) {
+        setSuccess(true);
+        console.log('Payment successful:', paymentIntent);
       }
       
       // Create order
@@ -223,7 +215,7 @@ const CheckoutForm = () => {
           method: formData.shippingMethod,
         },
         payment: {
-          paymentMethodId: paymentMethod.id,
+          paymentMethodId: paymentIntent.id,
           subtotal,
           shipping: shippingCost,
           tax: taxAmount,
@@ -595,7 +587,7 @@ const CheckoutForm = () => {
           
           <button
             type="submit"
-            disabled={processing || !stripe}
+            disabled={processing || !stripe || success}
             className={`w-full bg-teal-600 text-white py-3 px-4 rounded-md font-medium hover:bg-teal-700 transition-colors mt-6 flex items-center justify-center ${
               processing || !stripe ? 'opacity-70 cursor-not-allowed' : ''
             }`}
@@ -625,7 +617,7 @@ const CheckoutForm = () => {
                 Processing Order...
               </>
             ) : (
-              'Place Order'
+              success ? 'Payment Successful' : 'Place Order'
             )}
           </button>
           
@@ -647,7 +639,7 @@ const CheckoutForm = () => {
 };
 
 // Main Checkout Page wrapped with Stripe Elements provider
-const CheckoutPage = () => {
+const CheckoutPage = ({ clientSecret }: { clientSecret: string }) => {
   const { items } = useCart();
   const navigate = useNavigate();
   
@@ -673,10 +665,50 @@ const CheckoutPage = () => {
       </div>
       
       <Elements stripe={stripePromise}>
-        <CheckoutForm />
+        <CheckoutForm clientSecret={clientSecret} />
       </Elements>
     </div>
   );
 };
 
-export default CheckoutPage;
+const App = () => {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchClientSecret = async () => {
+      try {
+        const secret = await createPaymentIntent();
+        setClientSecret(secret);
+      } catch (error) {
+        console.error('Error fetching client secret:', error);
+      }
+    };
+
+    fetchClientSecret();
+  }, []);
+
+  if (!clientSecret) {
+    return <div>Loading...</div>;
+  }
+
+  return <CheckoutPage clientSecret={clientSecret} />;
+};
+
+export default App;
+
+// Example API call in the frontend
+const createPaymentIntent = async () => {
+  const response = await fetch('/api/payments/intent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: 1000, currency: 'usd' }),
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    console.log('Client Secret:', data.paymentIntent.client_secret); // Debugging
+    return data.paymentIntent.client_secret;
+  } else {
+    throw new Error(data.message || 'Failed to create payment intent');
+  }
+};

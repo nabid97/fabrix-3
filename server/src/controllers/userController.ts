@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '../middleware/asyncHandler';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { ApiError } from '../utils/ApiError';
+import config from '../config';
 import { generateToken } from '../utils/generateToken';
 import { AuthRequest } from '../types/express';
 import { Types } from 'mongoose';
@@ -45,33 +48,41 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
   }
 });
 
-// @desc    Login user & get token
+// @desc    Login user
 // @route   POST /api/users/login
 // @access  Public
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+  // Check if email and password are provided
+  if (!email || !password) {
+    throw new ApiError(400, 'Please provide email and password');
+  }
 
+  // Find user by email
+  const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(401, 'Invalid email or password');
   }
 
   // Check if password matches
-  const isMatch = await user.matchPassword(password);
-
+  const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     throw new ApiError(401, 'Invalid email or password');
   }
 
-  // Generate token and send in cookie
-  generateToken(res, user._id as Types.ObjectId);
+  // Generate JWT token
+  const token = jwt.sign({ id: user._id }, config.jwtSecret, { expiresIn: '30d' });
 
-  res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    isAdmin: user.isAdmin
+  // Return the token and user details
+  res.status(200).json({
+    success: true,
+    token,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+    },
   });
 });
 

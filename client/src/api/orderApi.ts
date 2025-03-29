@@ -87,14 +87,19 @@ export const getOrderDetails = async (orderId: string): Promise<Order> => {
 };
 
 // Create new order
-export const createOrder = async (orderData: any): Promise<Order> => {
-  try {
-    const response = await axios.post('/api/orders', orderData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating order:', error);
-    throw error;
+export const createOrder = async (orderData: any): Promise<{ id: string }> => {
+  const response = await fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderData),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to create order');
   }
+
+  const data = await response.json();
+  return data; // Ensure the returned data includes the order ID
 };
 
 // Update order status
@@ -129,3 +134,65 @@ export const getOrderHistory = async (userId: string): Promise<Order[]> => {
     throw error;
   }
 };
+
+// Fetch all orders for authenticated users
+export const getOrders = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication token is missing.');
+    }
+
+    const response = await fetch('/api/orders/myorders', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch orders');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    throw error;
+  }
+};
+
+// Fetch a single order by order number (for guest users)
+export interface OrderResponse {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  status: string;
+  customer: Customer;
+  shipping: Shipping;
+  payment: Payment;
+  items: OrderItem[];
+}
+
+export const getOrderByNumber = async (orderNumber: string): Promise<OrderResponse> => {
+  try {
+    const response = await fetch(`/api/orders/number/${orderNumber}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data: OrderResponse = await response.json();
+    if (!response.ok) {
+      throw new Error((data as any).message || 'Failed to fetch order');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching order by number:', error);
+    throw error;
+  }
+};
+

@@ -11,8 +11,6 @@ import { HelmetProvider } from 'react-helmet-async';
 import VerifyAccountPage from './pages/VerifyAccountPage';
 import AccountPage from './pages/AccountPage';
 
-
-
 // Lazy-loaded page components
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ClothingPage = lazy(() => import('./pages/ClothingPage'));
@@ -27,8 +25,8 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
+const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage')); // Import OrderHistoryPage
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
-
 
 function App() {
   return (
@@ -56,6 +54,7 @@ function App() {
                       <Route path="/cart" element={<CartPage />} />
                       <Route path="/checkout" element={<CheckoutPage />} />
                       <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+                      <Route path="/order-history" element={<OrderHistoryPage />} /> {/* Add Order History Route */}
                       <Route path="/verify-account" element={<VerifyAccountPage />} />
                       <Route path="/account" element={<AccountPage />} />
                       <Route path="*" element={<NotFoundPage />} />

@@ -1,8 +1,26 @@
 import Stripe from 'stripe';
 import config from '../../config';
 
+interface Config {
+  jwtSecret?: string;
+  stripe?: {
+    secretKey?: string;
+    webhookSecret?: string;
+  };
+}
+
+const typedConfig: Config = config;
+
+// Stripe configuration
+const stripeConfig = {
+  secretKey: typedConfig?.stripe?.secretKey || '',
+  webhookSecret: typedConfig?.stripe?.webhookSecret || '',
+};
+
+console.log('Stripe Secret Key:', stripeConfig.secretKey);
+
 // Initialize Stripe with secret key
-const stripe = new Stripe(config.stripe.secretKey, {
+const stripe = new Stripe(stripeConfig.secretKey, {
   apiVersion: '2023-10-16', // Use the latest API version
 });
 
@@ -27,7 +45,6 @@ export const createPaymentIntent = async (
         enabled: true,
       },
     });
-    
     return paymentIntent;
   } catch (error) {
     console.error('Stripe payment intent creation error:', error);
@@ -121,7 +138,7 @@ export const handleWebhookEvent = (
     const event = stripe.webhooks.constructEvent(
       payload,
       signature,
-      config.stripe.webhookSecret
+      stripeConfig.webhookSecret
     );
     
     return event;
@@ -162,5 +179,42 @@ export const createRefund = async (
   } catch (error) {
     console.error('Stripe refund creation error:', error);
     throw new Error('Failed to create refund');
+  }
+};
+
+/**
+ * Handle webhook events from Stripe
+ * @param req - Request object
+ * @param res - Response object
+ */
+import { Request, Response } from 'express';
+
+export const handleWebhook = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const sig = req.headers['stripe-signature'] as string | undefined;
+    if (!sig) {
+      console.error('Missing Stripe signature header');
+      res.status(400).send('Missing Stripe signature header');
+      return;
+    }
+
+    const rawBody = req.body instanceof Buffer ? req.body : Buffer.from(JSON.stringify(req.body));
+    const event = stripe.webhooks.constructEvent(rawBody, sig, stripeConfig.webhookSecret);
+
+    // Handle the event
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        console.log('PaymentIntent was successful!');
+        break;
+      case 'payment_intent.payment_failed':
+        console.log('PaymentIntent failed.');
+        break;
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(400).send(`Webhook Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
