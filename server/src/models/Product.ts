@@ -5,30 +5,33 @@ export interface IBaseProduct extends Document {
   name: string;
   description: string;
   images: string[];
+  imageUrl?: string;  // Added for compatibility
   price: number;
+  basePrice?: number; // Added for compatibility with seeder
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  type: string;
 }
 
 // Clothing product interface
 export interface IClothingProduct extends IBaseProduct {
   type: 'clothing';
-  availableSizes: string[];
-  availableColors: string[];
-  fabricOptions: string[];
-  gender: string[];
-  minOrderQuantity: number;
-  weight: number; // in grams
-  dimensions: {
-    length: number;
-    width: number;
-    height: number;
+  availableSizes?: string[];
+  availableColors?: string[];
+  fabricOptions?: string[];
+  gender?: string[];
+  minOrderQuantity?: number;
+  weight?: number;
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
   };
-  customizationOptions: {
-    allowsLogo: boolean;
-    logoPositions: string[];
-    allowsCustomColors: boolean;
+  customizationOptions?: {
+    allowsLogo?: boolean;
+    logoPositions?: string[];
+    allowsCustomColors?: boolean;
   };
 }
 
@@ -36,6 +39,7 @@ export interface IClothingProduct extends IBaseProduct {
 export interface IFabricProduct extends IBaseProduct {
   type: 'fabric';
   fabricType: string;
+  pattern: string;
   composition: string;
   weight: string; // e.g., "200 GSM"
   width: number; // in cm
@@ -60,18 +64,33 @@ const baseProductSchema = new Schema(
     },
     images: {
       type: [String],
-      required: true,
-      validate: [(val: string[]) => val.length > 0, 'At least one image is required'],
+      default: [],
+    },
+    imageUrl: {
+      type: String,
+      required: function (this: any) {
+        return this.images.length === 0;
+      },
+      default: 'https://via.placeholder.com/300x300?text=No+Image',
     },
     price: {
       type: Number,
       required: true,
       min: 0,
     },
+    basePrice: {
+      type: Number,
+      min: 0,
+    },
     isActive: {
       type: Boolean,
       default: true,
     },
+    type: {
+      type: String,
+      required: true,
+      enum: ['clothing', 'fabric']
+    }
   },
   {
     timestamps: true,
@@ -79,152 +98,139 @@ const baseProductSchema = new Schema(
   }
 );
 
+baseProductSchema.index({ type: 1, isActive: 1 });
+
+baseProductSchema.virtual('formattedPrice').get(function () {
+  return `$${this.price.toFixed(2)}`;
+});
+
 // Create the base model
 const Product = mongoose.model<IBaseProduct>('Product', baseProductSchema);
 
 // Clothing product schema
-const clothingSchema = new Schema({
-  availableSizes: {
-    type: [String],
-    required: true,
-    validate: [(val: string[]) => val.length > 0, 'At least one size is required'],
-  },
-  availableColors: {
-    type: [String],
-    required: true,
-    validate: [(val: string[]) => val.length > 0, 'At least one color is required'],
-  },
-  fabricOptions: {
-    type: [String],
-    required: true,
-    validate: [(val: string[]) => val.length > 0, 'At least one fabric option is required'],
-  },
-  gender: {
-    type: [String],
-    required: true,
-    // Remove the enum restriction or update it to include all valid values
-    // enum: {
-    //   values: ['men', 'women', 'unisex'],
-    //   message: '{VALUE} is not a valid gender',
-    // },
-  },
-  minOrderQuantity: {
-    type: Number,
-    required: true,
-    min: [1, 'Minimum order quantity must be at least 1'],
-    default: 50,
-  },
-  weight: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  dimensions: {
-    length: {
+const ClothingProduct = Product.discriminator<IClothingProduct>(
+  'clothing',
+  new Schema({
+    availableSizes: {
+      type: [String],
+      validate: {
+        validator: (v: string[]) => v.length > 0,
+        message: 'At least one size must be available.',
+      },
+      default: [],
+    },
+    availableColors: {
+      type: [String],
+      default: [],
+    },
+    fabricOptions: {
+      type: [String],
+      default: [],
+    },
+    gender: {
+      type: [String],
+      default: ['Unisex'],
+    },
+    minOrderQuantity: {
       type: Number,
-      required: true,
+      min: [1, 'Minimum order quantity must be at least 1'],
+      default: 1,
+    },
+    weight: {
+      type: Number,
       min: 0,
+      default: 0,
+    },
+    dimensions: {
+      length: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      width: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      height: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+    },
+    customizationOptions: {
+      allowsLogo: {
+        type: Boolean,
+        default: false,
+      },
+      logoPositions: {
+        type: [String],
+        default: [],
+      },
+      allowsCustomColors: {
+        type: Boolean,
+        default: false,
+      },
+    },
+  })
+);
+
+// Fabric product schema
+const FabricProduct = Product.discriminator<IFabricProduct>(
+  'fabric',
+  new Schema({
+    fabricType: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    pattern: {
+      type: String,
+      required: true,
+      default: 'Plain',
     },
     width: {
       type: Number,
       required: true,
       min: 0,
+      default: 150,
     },
-    height: {
-      type: Number,
+    composition: {
+      type: String,
       required: true,
-      min: 0,
+      default: 'Unknown',
     },
-  },
-  customizationOptions: {
-    allowsLogo: {
-      type: Boolean,
-      default: true,
+    weight: {
+      type: String,
+      required: true,
+      trim: true,
+      default: 'Medium',
     },
-    logoPositions: {
+    availableColors: {
       type: [String],
-      default: ['left-chest', 'right-chest', 'center-chest', 'back'],
+      default: [],
     },
-    allowsCustomColors: {
-      type: Boolean,
-      default: false,
+    styles: {
+      type: [String],
+      default: ['Regular'],
     },
-  },
-});
-
-/* Example schema structure:
-{
-  name: { type: String, required: true },
-  type: { type: String, required: true },
-  // other fields...
-  images: [{ type: String }], // Array of image URLs
-  // OR
-  imageUrl: { type: String }  // Single image URL
-}
-*/
-
-// Fabric product schema
-const fabricSchema = new Schema({
-  fabricType: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  pattern: {
-    type: String,
-    required: true,
-  },
-  width: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  composition: {
-    type: [String],
-    required: true,
-  },
-  weight: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  availableColors: {
-    type: [String],
-    required: true,
-    validate: [(val: string[]) => val.length > 0, 'At least one color is required'],
-  },
-  styles: {
-    type: [String],
-    default: ['Regular'],
-  },
-  minOrderLength: {
-    type: Number,
-    required: false,
-    min: 1,
-    default: 1,
-  },
-  careInstructions: {
-    type: String,
-    required: true,
-  },
-  certifications: {
-    type: [String],
-    default: [],
-  },
-  minOrderQuantity: {
-    type: Number,
-    required: true,
-    min: 1,
-    default: 1,
-  },
-});
-
-// Create discriminators
-export const ClothingProduct = Product.discriminator<IClothingProduct>(
-  'clothing',
-  clothingSchema
+    minOrderLength: {
+      type: Number,
+      min: 1,
+      default: 1,
+    },
+    careInstructions: {
+      type: String,
+      required: true,
+      default: 'Machine wash cold, tumble dry low',
+    },
+    certifications: {
+      type: [String],
+      default: [],
+    },
+  })
 );
 
-export const FabricProduct = Product.discriminator<IFabricProduct>('fabric', fabricSchema);
-
+// Export the model and its discriminators
+export { ClothingProduct, FabricProduct };
 export default Product;

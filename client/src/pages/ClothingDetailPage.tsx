@@ -5,20 +5,8 @@ import { ShoppingCart, ChevronLeft } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { getImageWithFallback } from '../utils/imageUtils';
 import { fetchClothingProductById } from '../api/productApi'; // You'll need to create this function
+import { ClothingProduct } from '../types/product'; // Use the centralized interface
 
-interface ClothingProduct {
-  id: string;
-  name: string;
-  description: string;
-  basePrice: number;
-  imageUrl: string;
-  images?: string[];
-  availableSizes: string[];
-  availableColors: string[];
-  fabricOptions: string[];
-  gender: string[];
-  minOrderQuantity: number;
-}
 
 const ClothingDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();

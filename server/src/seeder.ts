@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from './models/User';
-import Product, { ClothingProduct, FabricProduct } from './models/Product';
+import Product from './models/Product';
 import Order from './models/Order';
 import config from './config';
 
@@ -28,18 +28,35 @@ const importData = async () => {
     const createdUsers = await User.insertMany(users);
     const adminUser = createdUsers[0]._id;
 
-    // Add admin user reference to products
+    // Add admin user reference and ensure unique IDs for products
     const clothingProductsWithUser = clothingProducts.map(product => {
-      return { ...product, user: adminUser };
+      return {
+        ...product,
+        user: adminUser,
+        basePrice: product.price, // Map `price` to `basePrice` for consistency
+        type: 'clothing', // Add type for clothing products
+        // Ensure imageUrl exists by using the first image from the images array or a default value
+        imageUrl: product.images?.[0] || 'https://via.placeholder.com/300x300?text=No+Image',
+      };
     });
 
     const fabricProductsWithUser = fabricProducts.map(product => {
-      return { ...product, user: adminUser };
+      return {
+        ...product,
+        user: adminUser,
+        basePrice: product.price, // Map `price` to `basePrice` for consistency
+        type: 'fabric', // Add type for fabric products
+        fabricType: product.fabricType || 'Unknown',
+        pattern: product.pattern || 'Plain',
+        width: product.width || 150,
+        careInstructions: product.careInstructions || 'Machine wash cold, tumble dry low',
+        // Ensure imageUrl exists by using the first image from the images array or a default value
+        imageUrl: product.images?.[0] || 'https://via.placeholder.com/300x300?text=No+Image',
+      };
     });
 
     // Insert products
-    await ClothingProduct.insertMany(clothingProductsWithUser);
-    await FabricProduct.insertMany(fabricProductsWithUser);
+    await Product.insertMany([...clothingProductsWithUser, ...fabricProductsWithUser]);
 
     console.log('\x1b[32m%s\x1b[0m', 'Data imported!');
     process.exit();

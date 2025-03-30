@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { AlertCircle, CheckCircle, User, Shield, Settings, CreditCard } from 'lucide-react';
+import { AlertCircle, CheckCircle, User, Shield, Settings, CreditCard, Package } from 'lucide-react';
 
 /**
  * @typedef {Object} UserProfile
@@ -329,6 +329,15 @@ const fetchUserProfile = async () => {
                   <CreditCard className="mr-3 h-5 w-5" />
                   <span>Billing</span>
                 </button>
+                {/* Order History Button */}
+                <button 
+                  onClick={() => navigate('/order-history')}
+                  className="flex items-center px-3 py-2 w-full text-left rounded-md text-gray-700 hover:bg-gray-100"
+                >
+                  <Package className="mr-3 h-5 w-5" />
+                  <span>Order History</span>
+                </button>
+
                 {/* Logout Button */}
                 <button
                   onClick={async () => {

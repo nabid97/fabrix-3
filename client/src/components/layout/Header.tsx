@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { Menu, X, ShoppingBag, User, Search, ChevronDown } from 'lucide-react';
+import logo from '../../assets/FabriXlogo.png';
+
 
 const Header: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -66,7 +68,13 @@ const Header: React.FC = () => {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <Link to="/" className="text-2xl font-bold text-teal-600">FabriX</Link>
+              <Link to="/" className="flex items-center">
+                <img 
+                  src={logo} 
+                  alt="FabriX" 
+                  className="h-10 md:h-10" // Updated height to make it 5 times bigger
+                />
+              </Link>
             </div>
 
             {/* Desktop Navigation */}

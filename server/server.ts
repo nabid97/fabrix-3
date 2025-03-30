@@ -11,7 +11,7 @@ const apiKey = process.env.STABILITY_API_KEY;
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://nabid1997:Hesoyam@fabrix.eajok.mongodb.net/?retryWrites=true&w=majority&appName=fabrix',);
+    const conn = await mongoose.connect(process.env.MONGO_URI || '',);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error: any) {
     console.error(`Error: ${error.message}`);

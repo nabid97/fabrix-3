@@ -231,7 +231,7 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
       clearCart();
       
       // Redirect to order confirmation page
-      navigate(`/order-confirmation/${order.id}`);
+      handlePaymentSuccess(paymentIntent);
     } catch (error) {
       console.error('Order processing error:', error);
       setOrderError('There was an error processing your order. Please try again.');
@@ -240,6 +240,70 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
     }
   };
   
+  const handlePaymentSuccess = async (paymentIntent: any) => {
+    try {
+      // Log the payment intent for debugging
+      console.log("Payment successful:", paymentIntent);
+      
+      // Create an order summary from the cart and customer info
+      const orderSummary = {
+        orderNumber: `FB-${Date.now().toString().slice(-6)}`, // Generate a temporary order number
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+        // Fix: Ensure total is always a number
+        total: parseFloat(orderTotal.toString()), // Explicitly convert to number
+        items: items.map(item => ({
+          ...item,
+          id: item.id || `temp-${Date.now()}`,
+          type: item.type || 'clothing'
+        })),
+        customer: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company
+        },
+        shipping: {
+          address1: formData.address1,
+          address2: formData.address2,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          country: formData.country,
+          method: formData.shippingMethod
+        },
+        payment: {
+          subtotal: parseFloat(subtotal.toString()),
+          shipping: parseFloat(shippingCost.toString()),
+          tax: parseFloat(taxAmount.toString()),
+          total: parseFloat(orderTotal.toString()), // Also stored in payment.total
+          cardBrand: paymentIntent?.payment_method?.card?.brand,
+          lastFour: paymentIntent?.payment_method?.card?.last4
+        }
+      };
+      
+      // Store the last order in localStorage
+      localStorage.setItem('lastOrder', JSON.stringify(orderSummary));
+      console.log('Order summary stored in localStorage');
+      
+      // Clear the cart if needed
+      // clearCart();
+      
+      // Navigate to order confirmation
+      const tempOrderNumber = orderSummary.orderNumber;
+      console.log(`Navigating to order confirmation for ${tempOrderNumber}`);
+      navigate(`/order-confirmation/${tempOrderNumber}`, { 
+        state: { orderData: orderSummary } 
+      });
+    } catch (err) {
+      console.error("Error handling successful payment:", err);
+      // Still navigate to order confirmation but with a generated ID
+      const fallbackOrderId = `FB-${Date.now().toString().slice(-6)}`;
+      navigate(`/order-confirmation/${fallbackOrderId}`);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Customer & Shipping Information */}

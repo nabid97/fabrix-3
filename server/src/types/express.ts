@@ -1,6 +1,6 @@
 import { Request } from 'express';
 import mongoose from 'mongoose';
-import { IUser } from '../models/User';
+import { IUser } from '../models/User.js';
 
 /**
  * Extended Express Request with authenticated user

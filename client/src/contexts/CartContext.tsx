@@ -24,6 +24,7 @@ interface CartContextType {
   clearCart: () => void;
   itemCount: number;
   totalPrice: number;
+  addToCart: (item: CartItem) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -93,6 +94,10 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     0
   );
 
+  const addToCart = (item: CartItem) => {
+    addItem(item);
+  };
+
   const value = {
     items,
     addItem,
@@ -101,6 +106,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     clearCart,
     itemCount,
     totalPrice,
+    addToCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

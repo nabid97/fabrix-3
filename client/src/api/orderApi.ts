@@ -76,11 +76,43 @@ export interface CartItem {
 
 // API Functions
 // Get order details by ID
-export const getOrderDetails = async (orderId: string): Promise<Order> => {
+export const getOrderDetails = async (orderNumber: string) => {
   try {
-    const response = await axios.get(`/api/orders/${orderId}`);
+    // Validate orderNumber parameter
+    if (!orderNumber) {
+      throw new Error('Order number is required');
+    }
+    
+    const token = localStorage.getItem('token');
+    
+    // Try to get from localStorage first if it matches
+    const localOrder = JSON.parse(localStorage.getItem('lastOrder') || 'null');
+    if (localOrder && localOrder.orderNumber === orderNumber) {
+      console.log('Found matching order in localStorage');
+      return localOrder;
+    }
+    
+    // If not in localStorage, try API
+    console.log(`Fetching order ${orderNumber} from API with auth token: ${token ? 'Yes' : 'No'}`);
+    
+    const response = await axios.get(`/api/orders/${orderNumber}`, {
+      headers: token ? {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      } : {
+        'Content-Type': 'application/json'
+      }
+    });
+    
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // If API call fails, check localStorage one more time as fallback
+    const localOrder = JSON.parse(localStorage.getItem('lastOrder') || 'null');
+    if (localOrder) {
+      console.log('API call failed, using localStorage order as fallback');
+      return localOrder;
+    }
+    
     console.error('Error fetching order details:', error);
     throw error;
   }
@@ -139,26 +171,37 @@ export const getOrderHistory = async (userId: string): Promise<Order[]> => {
 export const getOrders = async () => {
   try {
     const token = localStorage.getItem('token');
+    
     if (!token) {
-      throw new Error('Authentication token is missing.');
+      console.error('No authentication token found');
+      throw new Error('Authentication required');
     }
-
-    const response = await fetch('/api/orders/myorders', {
-      method: 'GET',
+    
+    console.log('Fetching orders with token:', token.substring(0, 10) + '...');
+    
+    // Ensure correct headers are being sent
+    const response = await axios.get('/api/orders', {
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`, // Include the token in the Authorization header
-      },
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch orders');
+    
+    console.log('Orders API response status:', response.status);
+    console.log('Orders data structure:', response.data);
+    
+    return response.data;
+  } catch (error: any) {
+    // Add better error logging
+    console.error('Error fetching orders:', error.response?.data || error.message);
+    
+    // Try to build orders from localStorage as fallback
+    const lastOrder = JSON.parse(localStorage.getItem('lastOrder') || 'null');
+    if (lastOrder) {
+      console.log('Using localStorage order as fallback');
+      return [lastOrder];
     }
-
-    return data;
-  } catch (error) {
-    console.error('Error fetching orders:', error);
+    
     throw error;
   }
 };

@@ -1,40 +1,10 @@
 import axios from 'axios';
+import { ClothingProductApiResponse } from '../types/product';
+import { ClothingProduct, FabricProduct } from '../types/product'; // Import the centralized interface
 
 // Set the base API URL based on environment
 const API_URL = 'http://localhost:5000/api';  // This will use the proxy settings in package.json
 
-// Product interfaces
-export interface ClothingProduct {
-  id: string;
-  name: string;
-  description: string;
-  basePrice: number;
-  imageUrl: string;
-  availableSizes: string[];
-  availableColors: string[];
-  fabricOptions: string[];
-  gender: string[];
-  minOrderQuantity: number;
-  images?: string[];
-}
-
-// Update the FabricProduct interface
-export interface FabricProduct {
-  id: string;
-  name: string;
-  description: string;
-  pricePerMeter: number;
-  imageUrl: string;
-  availableColors: string[];
-  type: string;
-  pattern?: string;
-  width?: number;
-  composition: string | string[];
-  weight: string;
-  minOrderQuantity: number;
-  minOrderLength?: number;
-  styles?: string[];
-}
 
 /**
  * Fetch all products
@@ -63,7 +33,7 @@ export const fetchProducts = async (
 /**
  * Fetch clothing products
  */
-export const fetchClothingProducts = async (): Promise<ClothingProduct[]> => {
+export const fetchClothingProducts = async (): Promise<ClothingProductApiResponse[]> => {
   try {
     console.log(`Fetching clothing products from: ${API_URL}/products/clothing`);
     const response = await axios.get(`${API_URL}/products/clothing`, {
@@ -118,7 +88,7 @@ export const fetchFabricProducts = async () => {
 };
 
 // Add alias for backward compatibility
-export const fetchFabrics = fetchFabricProducts;
+// Removed duplicate definition of fetchFabrics
 
 /**
  * Fetch a single product by ID
@@ -136,43 +106,18 @@ export const fetchProductById = async (id: string) => {
 /**
  * Fetch a single clothing product by ID
  */
-export const fetchClothingProductById = async (id: string): Promise<ClothingProduct> => {
+export async function fetchClothingProductById(id: string): Promise<ClothingProduct> {
   try {
-    console.log(`Fetching clothing product with ID: ${id}`);
-    const response = await axios.get(`${API_URL}/products/clothing/${id}`, {
-      timeout: 10000,
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
-    });
-    
-    console.log('API response status:', response.status);
-    
-    if (!response.data) {
-      throw new Error('No product data received');
+    const response = await fetch(`/api/products/clothing/${id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch product details');
     }
-    
-    return response.data;
-  } catch (error: any) {
-    // Enhanced error logging
-    console.error(`Error fetching clothing product with ID ${id}:`, error);
-    
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-      
-      if (error.response.status === 404) {
-        throw new Error(`Clothing product with ID ${id} not found`);
-      }
-    } else if (error.request) {
-      console.error('No response received from server');
-      throw new Error('Network error: No response received from server');
-    }
-    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching product details:', error);
     throw error;
   }
-};
+}
 
 /**
  * Fetch a single fabric product by ID
@@ -247,3 +192,28 @@ export const filterProducts = async (filters: Record<string, any>) => {
     throw error;
   }
 };
+
+export async function fetchFabrics(): Promise<FabricProduct[]> {
+  try {
+    const response = await fetch('/api/products/fabric');
+    if (!response.ok) {
+      throw new Error('Failed to fetch fabrics');
+    }
+    const data = await response.json();
+    return data.map((fabric: any) => ({
+      id: fabric._id,
+      name: fabric.name,
+      description: fabric.description || '',
+      pricePerMeter: fabric.pricePerMeter || 0,
+      availableColors: fabric.availableColors || [],
+      styles: fabric.styles || [],
+      composition: fabric.composition || 'Unknown',
+      weight: fabric.weight || 'Medium',
+      minOrderLength: fabric.minOrderLength || 1,
+      imageUrl: fabric.imageUrl || '',
+    }));
+  } catch (error) {
+    console.error('Error fetching fabrics:', error);
+    throw error;
+  }
+}

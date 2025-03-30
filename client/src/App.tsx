@@ -10,6 +10,7 @@ import Chatbot from './components/common/Chatbot';
 import { HelmetProvider } from 'react-helmet-async';
 import VerifyAccountPage from './pages/VerifyAccountPage';
 import AccountPage from './pages/AccountPage';
+import ViewDetailsPage from './pages/ViewDetailsPage'; // Import ViewDetailsPage
 
 // Lazy-loaded page components
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -44,6 +45,7 @@ function App() {
                       <Route path="/" element={<HomePage />} />
                       <Route path="/clothing" element={<ClothingPage />} />
                       <Route path="/clothing/:productSlug" element={<ClothingDetailPage />} />
+                      <Route path="/clothing/:id" element={<ViewDetailsPage />} /> {/* Add ViewDetailsPage route */}
                       <Route path="/fabrics" element={<FabricsPage />} />
                       <Route path="/fabrics/:fabricSlug" element={<FabricDetailPage />} />
                       <Route path="/logo-generator" element={<LogoGeneratorPage />} />
@@ -53,7 +55,7 @@ function App() {
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/cart" element={<CartPage />} />
                       <Route path="/checkout" element={<CheckoutPage />} />
-                      <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+                      <Route path="/order-confirmation/:orderNumber" element={<OrderConfirmationPage />} />
                       <Route path="/order-history" element={<OrderHistoryPage />} /> {/* Add Order History Route */}
                       <Route path="/verify-account" element={<VerifyAccountPage />} />
                       <Route path="/account" element={<AccountPage />} />

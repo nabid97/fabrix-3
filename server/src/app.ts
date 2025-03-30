@@ -5,7 +5,8 @@ import * as dotenv from 'dotenv';
 import { generateChatResponse } from './controllers/chatController';
 import productRoutes from './routes/productRoutes';
 import paymentRoutes from './routes/paymentRoutes';
-import orderRoutes from './routes/orderRoutes'; // Import order routes
+import orderRoutes from './routes/orderRoutes';
+import recommendationsRoutes from './routes/recommendationRoutes';
 import cookieParser from 'cookie-parser';
 
 dotenv.config();
@@ -16,7 +17,7 @@ const app = express();
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
-app.use(cookieParser()); // Add this line BEFORE your routes
+app.use(cookieParser());
 
 // Basic route for health check
 app.get('/', (req, res) => {
@@ -26,13 +27,14 @@ app.get('/', (req, res) => {
   });
 });
 
-// Chat API route - MUST be before the 404 handler
+// Chat API route
 app.post('/api/chat/gemini', generateChatResponse);
 
-// API Routes
-app.use('/api/products', productRoutes); // Ensure this is registered
-app.use('/api/payments', paymentRoutes); // Register payment routes
-app.use('/api/orders', orderRoutes); // Register order routes
+// API Routes - all using the same import style
+app.use('/api/products', productRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
 
 // Error handling middleware - must be the last one
 app.use((req, res) => {

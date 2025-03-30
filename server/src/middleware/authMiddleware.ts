@@ -6,7 +6,7 @@ import { ApiError } from '../utils/ApiError';
 import { AuthRequest } from '../types/express';
 import config from '../config';
 import mongoose from 'mongoose';
-import { IUser } from '../models/User';
+import { IUser } from '../models/User.js';
 // cookieParser is imported but should be used in the main app file, not here
 // Protect routes
 export const protect = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {

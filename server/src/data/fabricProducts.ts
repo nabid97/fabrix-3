@@ -201,4 +201,40 @@ const clothingProducts = [
   }
 ];
 
-export default clothingProducts;
+const fabricProducts = [
+  {
+    name: 'Cotton Fabric',
+    description: 'High-quality cotton fabric suitable for various uses.',
+    price: 9.99,
+    availableColors: ['White', 'Black', 'Blue', 'Red'],
+    availableSizes: ['1m', '2m', '5m'],
+    fabricType: 'Cotton', // Add required field
+    pattern: 'Plain', // Add required field
+    careInstructions: 'Machine wash cold, tumble dry low', // Add required field
+    width: 150, // Add required field (in cm)
+    weight: 200, // Optional field
+    customizationOptions: {
+      allowsLogo: false,
+      allowsCustomColors: false,
+    },
+    images: ['https://fabrix-assets/clothing/cottonfabric.jpg'], // Added images property
+  },
+  {
+    name: 'Polyester Fabric',
+    description: 'Durable polyester fabric ideal for outdoor use.',
+    price: 7.99,
+    availableColors: ['Gray', 'Green', 'Yellow'],
+    availableSizes: ['1m', '3m', '10m'],
+    fabricType: 'Polyester', // Add required field
+    pattern: 'Textured', // Add required field
+    careInstructions: 'Hand wash only, do not tumble dry', // Add required field
+    width: 140, // Add required field (in cm)
+    weight: 180, // Optional field
+    customizationOptions: {
+      allowsLogo: false,
+      allowsCustomColors: true,
+    },
+  },
+];
+
+export default fabricProducts;

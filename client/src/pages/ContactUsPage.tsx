@@ -377,7 +377,7 @@ const ContactUsPage = () => {
       
       {/* Map Section */}
       <div className="max-w-5xl mx-auto mt-12">
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">Our Location</h2>
+        <h2 className="text-3xl font-bold mb-6 text-gray-800 text-white">Our Location</h2>
         <div className="bg-white rounded-xl overflow-hidden shadow-lg">
           <div className="relative" style={{ height: "400px" }}>
             {/* Google Maps Embed */}

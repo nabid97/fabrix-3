@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { getOrderDetails } from '../api/orderApi';
 import { CheckCircle, ArrowRight, Printer, Mail, Package, Clock } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -62,51 +62,109 @@ interface Order {
 }
 
 const OrderConfirmationPage: React.FC = () => {
-  const { orderId } = useParams<{ orderId: string }>();
+  // Keep this useParams call at component level
+  const { orderNumber } = useParams<{ orderNumber: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { orderData } = useLocation().state || {};
-  const orderNumber = orderData?.orderNumber;
+  const location = useLocation();
+  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([]);
+  const navigate = useNavigate();
+ 
+  // Destructure location.state if needed in the future
 
   useEffect(() => {
-    const fetchOrderDetails = async () => {
+    const fetchOrderDetails = async (locationState: any) => {
       try {
-        if (!orderId) {
-          setError('Order ID not found');
+        setLoading(true);
+        
+        // Use order data from location state if available
+        const stateOrderData = locationState?.orderData;
+        
+        if (stateOrderData) {
+          console.log('Using order data from navigation state');
+          setOrder(stateOrderData);
           setLoading(false);
           return;
         }
         
-        const orderData = await getOrderDetails(orderId);
-        setOrder(orderData);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load order details');
+        // Try localStorage fallback if no orderNumber in URL or state
+        const localOrder = JSON.parse(localStorage.getItem('lastOrder') || 'null');
+        if (localOrder) {
+          console.log('Using order data from localStorage');
+          setOrder(localOrder);
+          setLoading(false);
+          return;
+        }
+        
+        // If still no orderNumber, show error
+        if (!orderNumber) {
+          console.error('No order number found in URL params, state, or localStorage');
+          setError('Order not found. The order number is missing.');
+          setLoading(false);
+          return;
+        }
+        
+        console.log(`Fetching order details for: ${orderNumber}`);
+        const data = await getOrderDetails(orderNumber);
+        setOrder(data);
+      } catch (err: any) {
+        console.error('Error fetching order:', err);
+        setError(err.message || 'Failed to load order details');
+      } finally {
         setLoading(false);
       }
     };
+    
+    // ONLY call once with the location state
+    fetchOrderDetails(location.state);
+    
+  }, [orderNumber, location.state]);
 
-    // If we have order data from the redirect, use that
-    if (orderData) {
-      setOrder(orderData);
-      // Save the order number to localStorage for later reference
-      localStorage.setItem('lastOrderNumber', orderData.orderNumber);
-    } 
-    // Otherwise try to fetch it if we have an order number
-    else if (orderNumber) {
-      fetch(`/api/orders/number/${orderNumber}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setOrder(data.order);
-          }
-        })
-        .catch(err => console.error('Error fetching order:', err));
-    } else {
-      fetchOrderDetails();
+  useEffect(() => {
+    const fetchRecommendedProducts = async () => {
+      try {
+        // Either fetch from API or generate based on ordered items
+        const data = await fetchRecommendations() || [];
+        
+        // Ensure each product has valid imageUrl
+        const productsWithValidImages = data.map((product: { id: string; name: string; imageUrl?: string; images?: string[] }) => ({
+          ...product,
+          imageUrl: validateImageUrl(product.imageUrl || product.images?.[0] || '')
+        }));
+        
+        setRecommendedProducts(productsWithValidImages);
+      } catch (err) {
+        console.error('Failed to load recommended products:', err);
+        setRecommendedProducts([]); // Set empty array on error
+      }
+    };
+    
+    // Helper to validate image URLs
+    const validateImageUrl = (url: string): string => {
+      if (!url) return "https://fabrix-assets.s3.us-east-1.amazonaws.com/placeholder.jpg";
+      
+      // If it's already a complete URL, return it as is
+      if (url.match(/^https?:\/\//)) {
+        return url;
+      }
+      
+      // Otherwise, prepend your base image URL
+      return `https://fabrix-assets.s3.us-east-1.amazonaws.com/${url}`;
+    };
+
+    // Only fetch recommendations after order is loaded
+    if (order) {
+      fetchRecommendedProducts();
     }
-  }, [orderId, orderData, orderNumber]);
+  }, [order]);
+
+  useEffect(() => {
+    if (recommendedProducts.length > 0) {
+      console.log('Recommended products:', recommendedProducts);
+      console.log('Image URLs:', recommendedProducts.map(p => p.imageUrl));
+    }
+  }, [recommendedProducts]);
 
   const handlePrint = () => {
     window.print();
@@ -153,6 +211,16 @@ const OrderConfirmationPage: React.FC = () => {
         </div>
       </div>
       
+      <div className="max-w-4xl mx-auto mb-6 print:hidden">
+        <button
+          onClick={() => navigate('/order-history')}
+          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-md transition-colors inline-flex items-center"
+        >
+          <Package size={18} className="mr-2" />
+          View All Orders
+        </button>
+      </div>
+
       {/* Order Details */}
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden mb-8 print:shadow-none">
         <div className="border-b border-gray-200 p-6">
@@ -330,8 +398,8 @@ const OrderConfirmationPage: React.FC = () => {
               You can track your order status in your account dashboard.
             </p>
             <Link
-              to="/account/orders"
-              className="text-teal-600 hover:text-teal-800 text-sm inline-flex items-center"
+              to="/order-history"
+              className="bg-teal-600 text-white px-3 py-2 rounded-md hover:bg-teal-700 text-sm inline-flex items-center"
             >
               Order History <ArrowRight size={14} className="ml-1" />
             </Link>
@@ -365,24 +433,45 @@ const OrderConfirmationPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Product Recommendations (hidden on print) */}
-      <div className="max-w-4xl mx-auto print:hidden">
-        <h2 className="text-xl font-bold mb-6">You Might Also Like</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {/* This would typically be populated with recommended products */}
-          {[1, 2, 3].map((num) => (
-            <div key={num} className="bg-white rounded-xl shadow-md overflow-hidden">
-              <div className="h-48 bg-gray-200">
-                <img
-                  src={`/api/placeholder/400/320`}
-                  alt={`Recommended product ${num}`}
-                  className="w-full h-full object-cover"
+      {/* Recommended Products Section */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-semibold mb-6 text-white">Recommended Products</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {recommendedProducts.map((product) => (
+            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="h-48 overflow-hidden relative">
+                <img 
+                  src={product.imageUrl} 
+                  alt={product.name}
+                  className="w-full h-full object-cover object-center"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    console.log(`Image failed to load: ${target.src}`);
+                    
+                    // Try a fallback image if available
+                    if (product.images && product.images.length > 0) {
+                      target.src = product.images[0];
+                    } else {
+                      // Use a placeholder image as last resort
+                      target.src = "https://fabrix-assets.s3.us-east-1.amazonaws.com/placeholder.jpg";
+                    }
+                    // Prevent infinite error loop
+                    target.onerror = null;
+                  }}
                 />
               </div>
               <div className="p-4">
-                <h3 className="font-medium">Recommended Product {num}</h3>
-                <p className="text-gray-600 text-sm mb-2">Product description here</p>
-                <p className="font-bold text-teal-600">$XX.XX</p>
+                <h3 className="text-lg font-semibold">{product.name}</h3>
+                <p className="text-teal-600 font-medium mt-1">
+                  ${typeof product.price === 'number' ? product.price.toFixed(2) : 
+                    (product.basePrice ? product.basePrice.toFixed(2) : '0.00')}
+                </p>
+                <button 
+                  onClick={() => navigate(`/product/${product.id}`)}
+                  className="mt-2 w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition-colors"
+                >
+                  View Details
+                </button>
               </div>
             </div>
           ))}
@@ -393,3 +482,58 @@ const OrderConfirmationPage: React.FC = () => {
 };
 
 export default OrderConfirmationPage;
+
+async function fetchRecommendations() {
+  try {
+    // Try to fetch from API first
+    const response = await fetch('/api/recommendations');
+    if (!response.ok) {
+      throw new Error('API endpoint not available');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.log('Falling back to generated recommendations');
+    
+    // Generate recommendations based on order items if API fails
+    return generateRecommendations();
+  }
+}
+
+// Add this function to generate recommendations when API fails
+function generateRecommendations() {
+  // Sample product data to use as fallback
+  return [
+    {
+      id: 'rec1',
+      name: 'Premium Cotton Twill',
+      price: 24.99,
+      imageUrl: 'https://via.placeholder.com/400x320/edf2f7/2d3748?text=Cotton+Twill',
+      type: 'fabric',
+      fabricType: 'Cotton'
+    },
+    {
+      id: 'rec2',
+      name: 'Oxford Button-Down Shirt',
+      price: 59.99,
+      imageUrl: 'https://via.placeholder.com/400x320/e6fffa/234e52?text=Oxford+Shirt',
+      type: 'clothing',
+      size: 'M'
+    },
+    {
+      id: 'rec3',
+      name: 'Merino Wool Blend',
+      price: 32.99,
+      imageUrl: 'https://via.placeholder.com/400x320/ebf4ff/2a4365?text=Wool+Blend',
+      type: 'fabric',
+      fabricType: 'Wool'
+    },
+    {
+      id: 'rec4',
+      name: 'Slim-Fit Chino Pants',
+      price: 79.99,
+      imageUrl: 'https://via.placeholder.com/400x320/faf5ff/44337a?text=Chino+Pants',
+      type: 'clothing'
+    }
+  ];
+}

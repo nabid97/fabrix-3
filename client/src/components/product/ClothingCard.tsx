@@ -1,20 +1,84 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getS3ImageUrl, getImageWithFallback } from '../../utils/imageUtils';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { ClothingProduct } from '../../types/product';
+
+const DEFAULT_PLACEHOLDER = 'https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/clothing-fallback.png';
+
+// Simplified image loading hook without CORS-triggering HEAD requests
+const useImage = (src: string, fallbackSrc: string) => {
+  const [imgSrc, setImgSrc] = useState<string>(src || fallbackSrc);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isError, setIsError] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Reset state if src changes
+    setIsLoaded(false);
+    setIsError(false);
+
+    if (!src) {
+      setImgSrc(fallbackSrc);
+      setIsError(true);
+      return;
+    }
+    
+    // Fix malformed URLs - single cleanup pass
+    let cleanSrc = src;
+    if (cleanSrc.startsWith('https://https://')) {
+      cleanSrc = cleanSrc.replace('https://https://', 'https://');
+    }
+    
+    if (cleanSrc.includes('.s3.us-east-1.amazonaws.com.s3.us-east-1.amazonaws.com')) {
+      cleanSrc = cleanSrc.replace('.s3.us-east-1.amazonaws.com.s3.us-east-1.amazonaws.com', 
+                                '.s3.us-east-1.amazonaws.com');
+    }
+    
+    // Set initial source to the cleaned URL
+    setImgSrc(cleanSrc);
+
+    // Use the Image API directly - no CORS preflight checks
+    const img = new Image();
+    
+    img.onload = () => {
+      console.log(`✅ Successfully loaded: ${cleanSrc}`);
+      setImgSrc(cleanSrc);
+      setIsLoaded(true);
+      setIsError(false);
+    };
+    
+    img.onerror = () => {
+      console.error(`❌ Failed to load image: ${cleanSrc}`);
+      setImgSrc(fallbackSrc);
+      setIsError(true);
+    };
+    
+    img.src = cleanSrc;
+    
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [src, fallbackSrc]);
+
+  return { imgSrc, isLoaded, isError };
+};
 
 interface ClothingCardProps {
   product: ClothingProduct;
   onClick?: (product: ClothingProduct) => void;
+  // These props should be optional
+  filteredProducts?: ClothingProduct[];
+  navigateToProduct?: (product: ClothingProduct) => void;
 }
 
-const ClothingCard: React.FC<ClothingCardProps> = ({ product, onClick }) => {
+const ClothingCard: React.FC<ClothingCardProps> = ({ 
+  product, 
+  onClick,
+  // We don't actually use these props in the component
+  filteredProducts, 
+  navigateToProduct 
+}) => {
   const navigate = useNavigate();
-  
-  // Protect against null/undefined product
-  if (!product) {
-    return null;
-  }
+  const { imgSrc } = useImage(product.imageUrl, DEFAULT_PLACEHOLDER);
 
   // Format price safely with fallback
   const formatPrice = (price: number | undefined): string => {
@@ -22,36 +86,19 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ product, onClick }) => {
     return price.toFixed(2);
   };
 
-  // Ensure proper S3 URL
-  const productImageUrl = product.imageUrl?.startsWith('http')
-    ? product.imageUrl
-    : getS3ImageUrl(`clothing/${product.imageUrl || 'business-shirt.jpg'}`);
-
-  // Use fallbacks both for the primary image and the S3 URL construction
-  const imageProps = getImageWithFallback(
-    productImageUrl,
-    product.name || 'Product'
-  );
-
   const handleClick = () => {
     if (onClick) {
       onClick(product);
+    } else if (navigateToProduct) {
+      navigateToProduct(product);
     } else if (product.id) {
       // Default behavior if no onClick provided
       navigate(`/clothing/${product.id}`);
     }
   };
 
-  // In your component, add better error logging
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    console.error(`Failed to load image: ${e.currentTarget.src}`);
-    
-    // Check if we're already using a data URI (to avoid infinite loops)
-    if (e.currentTarget.src.startsWith('data:')) return;
-    
-    // Set to a data URI as final fallback
-    e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='14' text-anchor='middle' dominant-baseline='middle' fill='%23666666'%3EProduct%3C/text%3E%3C/svg%3E";
-  };
+  // Add debug logging to help identify issues
+  console.log('Rendering product:', product.name, 'with image:', product.imageUrl);
 
   return (
     <div 
@@ -59,12 +106,15 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ product, onClick }) => {
       onClick={handleClick}
     >
       <div className="h-64 overflow-hidden">
-        <img
-          src={imageProps.src}
-          alt={product.name || 'Product'}
-          onError={imageProps.onError}
+        <img 
+          src={imgSrc}
+          alt={product.name}
           className="w-full h-full object-cover"
-          loading="lazy" // Add lazy loading for better performance
+          onError={(e) => {
+            console.error(`Image failed to load for ${product.name}: ${product.imageUrl}`);
+            e.currentTarget.src = DEFAULT_PLACEHOLDER;
+            e.currentTarget.onerror = null; // Prevent infinite error loop
+          }}
         />
       </div>
       <div className="p-4">
@@ -118,6 +168,13 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ product, onClick }) => {
             </span>
           )}
         </div>
+        
+        <Link 
+          to={`/clothing/${product.id}`} // Ensure product.id is valid
+          className="block w-full bg-gray-700 hover:bg-gray-600 text-white text-center py-2 px-4 rounded transition-colors"
+        >
+          View Details
+        </Link>
       </div>
     </div>
   );

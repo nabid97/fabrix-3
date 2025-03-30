@@ -1,4 +1,13 @@
-const clothingProducts = [
+export default [
+  {
+    name: 'T-Shirt',
+    description: 'A comfortable cotton t-shirt',
+    price: 19.99,
+    availableColors: ['red', 'blue', 'green'],
+    availableSizes: ['S', 'M', 'L', 'XL'],
+    images: ['https://example.com/tshirt.jpg'], // Added images property
+  },
+  
   {
     name: 'Premium Polo Shirt',
     description: 'High-quality polo shirt made from combed cotton. Perfect for company uniforms and events with custom embroidery options.',
@@ -200,5 +209,3 @@ const clothingProducts = [
     }
   }
 ];
-
-export default clothingProducts;

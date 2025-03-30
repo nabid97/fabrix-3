@@ -26,6 +26,29 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, navigate, redirectTo]);
 
+  interface LoginSuccessData {
+    token: string;
+    user?: Record<string, any>;
+  }
+
+  const handleLoginSuccess = (data: LoginSuccessData): void => {
+    // Store token in localStorage
+    localStorage.setItem('token', data.token);
+    console.log('Login successful! Token stored:', data.token.substring(0, 15) + '...');
+    
+    // Store user info if available
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    
+    // Verify token was stored correctly
+    const storedToken = localStorage.getItem('token');
+    console.log('Verification - token in localStorage:', storedToken ? 'Present' : 'Missing');
+    
+    // Navigate to appropriate page
+    navigate(redirectTo || '/');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setApiError(null);
@@ -38,11 +61,19 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
-      await login(username, password);
-      // Login successful, navigate to redirectTo
-      navigate(redirectTo);
+      // Add console logs to track login flow
+      console.log('Attempting login for:', username);
+      
+      const data = await login(username, password) as LoginSuccessData | void;
+
+      if (data && 'token' in data) {
+        // Handle login success
+        handleLoginSuccess(data as LoginSuccessData);
+      } else {
+        throw new Error('Invalid login response');
+      }
     } catch (error: any) {
-      console.log('Login error:', error);
+      console.error('Login error:', error);
       
       // Handle specific error cases
       if (error.code === 'UserNotConfirmedException') {

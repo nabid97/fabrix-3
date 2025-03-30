@@ -4,6 +4,7 @@ import { fetchFabrics } from '../api/productApi';
 import { ShoppingCart, Filter, X, Plus, Minus, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { getS3ImageUrl } from '../utils/imageUtils';
 import FabricCard from '../components/product/FabricCard';
+import { FabricProduct } from '../types/product'; // Use the centralized interface
 
 // Move this function definition before your FabricsPage component:
 
@@ -37,20 +38,6 @@ const formatPrice = (price: number | undefined | null): string => {
   return price.toFixed(2);
 };
 
-// Update your local Fabric interface to match the API response
-interface Fabric {
-  id: string;
-  name: string;
-  type: string;
-  pricePerMeter: number;
-  imageUrl: string;
-  description: string;
-  availableColors: string[];
-  styles: string[];
-  composition: string;
-  weight: string;
-  minOrderLength: number;
-}
 
 // Color options with hex values
 const colorOptions = [
@@ -76,7 +63,7 @@ const FabricPage = () => {
   const { addItem } = useCart();
   
   // Fabric state
-  const [fabrics, setFabrics] = useState<Fabric[]>([]);
+  const [fabrics, setFabrics] = useState<FabricProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -93,7 +80,7 @@ const FabricPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
   // Selected fabric state for customization
-  const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
+  const [selectedFabric, setSelectedFabric] = useState<FabricProduct | null>(null);
   const [customization, setCustomization] = useState({
     color: '',
     length: 1, // Default to 1 meter
@@ -137,9 +124,9 @@ const FabricPage = () => {
         const formattedData = data.map((fabric: any) => ({
           id: fabric._id, // Use `_id` from the API response
           name: fabric.name,
-          type: fabric.type || 'fabric',
+          type: (fabric.type || 'fabric').toLowerCase(), // Force lowercase for consistency
           pricePerMeter: fabric.price || 0, // Map `price` to `pricePerMeter`
-          imageUrl: fabric.images?.[0] || '', // Use the first image if available
+          imageUrl: fabric.images?.[0] ?? 'default-image-url.jpg', // Ensure imageUrl is always a string
           description: fabric.description || '',
           availableColors: fabric.availableColors || ['White', 'Black'],
           styles: fabric.styles || ['Regular'], // Ensure styles is always an array
@@ -167,25 +154,29 @@ const FabricPage = () => {
   // Filter fabrics based on selections
   const getFilteredFabrics = () => {
     return fabrics.filter((fabric) => {
-      // Filter by type
-      if (selectedTypes.length > 0 && !selectedTypes.includes(fabric.type.toLowerCase())) {
-        return false;
-      }
+      // Debug log to see what's happening
+      console.log('Filtering fabric:', {
+        name: fabric.name,
+        type: fabric.type,
+        selectedTypes: selectedTypes,
+        typeMatch: selectedTypes.length === 0 || selectedTypes.includes(fabric.type.toLowerCase())
+      });
       
-      // Filter by color
-      if (selectedColors.length > 0 && !fabric.availableColors.some(c => selectedColors.includes(c.toLowerCase()))) {
-        return false;
-      }
-      
-      // Filter by style
-      if (selectedStyles.length > 0) {
-        if (!fabric.styles || !fabric.styles.some(s => selectedStyles.includes(s.toLowerCase()))) {
+      // Fix the type filtering in getFilteredFabrics()
+      if (selectedTypes.length > 0) {
+        const fabricTypeLower = (fabric.type || '').toLowerCase();
+        if (!selectedTypes.some(type => fabricTypeLower === type.toLowerCase())) {
           return false;
         }
       }
       
-      // Filter by price
-      if (fabric.pricePerMeter < minPrice || fabric.pricePerMeter > maxPrice) {
+      // Filter by color - no changes needed here
+      
+      // Filter by style - no changes needed here
+      
+      // Filter by price - ensure pricePerMeter is a number
+      const price = Number(fabric.pricePerMeter);
+      if (isNaN(price) || price < minPrice || price > maxPrice) {
         return false;
       }
       
@@ -193,35 +184,39 @@ const FabricPage = () => {
     });
   }
   
-  // Sort the filtered fabrics
-  const getSortedFabrics = () => {
-    const filteredFabrics = getFilteredFabrics();
+  // Sort the filtered fabrics - fix potential undefined values
+const getSortedFabrics = () => {
+  const filteredFabrics = getFilteredFabrics();
+  
+  return [...filteredFabrics].sort((a, b) => {
+    let comparison = 0;
     
-    return [...filteredFabrics].sort((a, b) => {
-      // Handle sorting based on the selected sort option
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'pricePerMeter':
-          comparison = a.pricePerMeter - b.pricePerMeter;
-          break;
-        case 'type':
-          comparison = a.type.localeCompare(b.type);
-          break;
-        default:
-          comparison = 0;
-      }
-      
-      // Reverse the comparison if sorting in descending order
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  };
+    switch (sortBy) {
+      case 'name':
+        comparison = (a.name || '').localeCompare(b.name || '');
+        break;
+      case 'pricePerMeter':
+        comparison = (Number(a.pricePerMeter) || 0) - (Number(b.pricePerMeter) || 0);
+        break;
+      case 'type':
+        comparison = (a.type || '').localeCompare(b.type || '');
+        break;
+      default:
+        comparison = 0;
+    }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+};
   
   // Get the sorted and filtered fabrics
   const sortedFilteredFabrics = getSortedFabrics();
+  
+  // Add this to debug sort changes
+  useEffect(() => {
+    console.log(`Sort changed to: ${sortBy} ${sortDirection}`);
+    console.log('First 3 sorted fabrics:', sortedFilteredFabrics.slice(0, 3).map(f => f.name));
+  }, [sortBy, sortDirection, sortedFilteredFabrics]);
   
   // Toggle selection of filter items
   const toggleFilter = (
@@ -269,7 +264,7 @@ const FabricPage = () => {
   };
   
   // Handle opening the customization modal
-  const openCustomization = (fabric: Fabric) => {
+  const openCustomization = (fabric: FabricProduct) => {
     setSelectedFabric(fabric);
     // Set default customization values
     setCustomization({
@@ -320,14 +315,16 @@ const FabricPage = () => {
   
   // Render fabrics using FabricCard component
   const renderFabrics = () => {
-    const filteredFabrics = getFilteredFabrics();
-    
+    // Change this line - use sortedFilteredFabrics instead of getFilteredFabrics()
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredFabrics.map((fabric) => (
+        {sortedFilteredFabrics.map((fabric) => (
           <FabricCard 
             key={fabric.id} 
-            fabric={fabric} 
+            fabric={{
+              ...fabric,
+              imageUrl: fabric.imageUrl || 'default-image-url.jpg' // Ensure imageUrl is not undefined
+            }} 
             onClick={openCustomization} 
           />
         ))}
@@ -446,14 +443,12 @@ const FabricPage = () => {
             </div>
           </div>
           
-          {/* Price Range Filter */}
+          {/* Price Range Filter - Fix styling and ensure values are numbers */}
           <div className="mb-6">
             <h3 className="font-medium mb-3 text-white">Price Range (per meter)</h3>
-            <div className="flex items-center space-x-4">
-              <div>
-                <label htmlFor="minPrice" className="sr-only">
-                  Minimum Price
-                </label>
+            <div className="flex items-center justify-between">
+              <div className="w-[45%]">
+                <label htmlFor="minPrice" className="sr-only">Minimum Price</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="text-gray-400">$</span>
@@ -469,11 +464,11 @@ const FabricPage = () => {
                   />
                 </div>
               </div>
-              <span className="text-gray-300">to</span>
-              <div>
-                <label htmlFor="maxPrice" className="sr-only">
-                  Maximum Price
-                </label>
+              
+              <span className="text-gray-300 flex-shrink-0 mx-2">to</span>
+              
+              <div className="w-[45%]">
+                <label htmlFor="maxPrice" className="sr-only">Maximum Price</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="text-gray-400">$</span>
@@ -517,7 +512,11 @@ const FabricPage = () => {
               <div className="flex space-x-4">
                 <button 
                   onClick={() => handleSortChange('name')}
-                  className={`flex items-center ${sortBy === 'name' ? 'text-teal-400 font-medium' : 'text-gray-300'}`}
+                  className={`flex items-center px-3 py-1 rounded ${
+                    sortBy === 'name' 
+                      ? 'bg-teal-900 text-teal-300 font-medium' 
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
                 >
                   Name
                   {renderSortIcon('name')}

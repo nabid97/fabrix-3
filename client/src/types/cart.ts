@@ -1,20 +1,19 @@
 // src/types/cart.ts
 export interface CartItem {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    image: string;
-    fabricType?: string;
+  id: string;
+  type: string;
+  name: string;
+  price: number;
+  quantity: number;
+  imageUrl: string;
+  options: {
     color?: string;
-    fabric?: string;
-    logoUrl?: string;
-    orderQuantity?: number;
-    logoPosition?: string;
-    // Add any additional cart item properties as needed
-  }
-  
-  export interface CartState {
-    items: CartItem[];
-    total: number;
-  }
+    size?: string;
+    fabric?: string; // Add this line to include fabric
+  };
+}
+
+export interface CartState {
+  items: CartItem[];
+  total: number;
+}

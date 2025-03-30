@@ -8,6 +8,29 @@ const generateId = (name: string): string => {
   return `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
 };
 
+// Add this helper function at the top
+const getCorrectImageUrl = (productName: string, imageUrl?: string): string => {
+  // If an image URL is already provided and it's not a relative path, use it
+  if (imageUrl && imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  
+  // Map product names to known image filenames
+  const imageMap: Record<string, string> = {
+    'Business Oxford Shirt': 'business-shirt.jpg',
+    'Embroidered Cap': 'structured-cap.jpg',
+    'Corporate Softshell Jacket': 'softshell-jacket.jpg',
+    'Custom T-Shirt': 'classic-tshirt.jpg',
+    // Add other mappings as needed
+  };
+  
+  // Get the correct filename or generate one
+  const filename = imageMap[productName] || 
+    productName.toLowerCase().replace(/\s+/g, '-') + '.jpg';
+  
+  return `https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/${filename}`;
+};
+
 // @desc    Fetch all products
 // @route   GET /api/products
 // @access  Public
@@ -52,15 +75,27 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
 // @desc    Fetch single product
 // @route   GET /api/products/:id
 // @access  Public
-export const getProductById = asyncHandler(async (req: Request, res: Response) => {
-  const product = await Product.findById(req.params.id);
-  
-  if (!product) {
-    throw new ApiError(404, 'Product not found');
+export const getProductById = async (req: Request, res: Response, type: string | null = null) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: 'No product ID provided' });
+    }
+
+    const query = type ? { _id: id, type } : { _id: id };
+    const product = await Product.findOne(query);
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    return res.json(product);
+  } catch (error) {
+    console.error('Error fetching product by ID:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
-  
-  res.json(product);
-});
+};
 
 // @desc    Create a new clothing product
 // @route   POST /api/products/clothing
@@ -188,10 +223,49 @@ export const deleteProduct = asyncHandler(async (req: Request, res: Response) =>
 // @desc    Fetch clothing products
 // @route   GET /api/products/clothing
 // @access  Public
-export const getClothingProducts = asyncHandler(async (req: Request, res: Response) => {
-  const products = await ClothingProduct.find({ isActive: true });
-  res.json(products);
-});
+export const getClothingProducts = async (req: Request, res: Response) => {
+  try {
+    const products = await ClothingProduct.find({ isActive: true });
+    
+    // Transform products to ensure they have an imageUrl field
+    const transformedProducts = products.map(product => {
+      const productObj = product.toObject ? product.toObject() : product;
+      
+      // If product already has images array, use the first image as imageUrl
+      if (productObj.images && productObj.images.length > 0) {
+        return {
+          ...productObj,
+          imageUrl: productObj.images[0] // Set imageUrl from first image in array
+        };
+      }
+      
+      // Otherwise use filename mapping
+      const imageMap: Record<string, string> = {
+        'Premium Polo Shirt': 'premium-polo-shirt.jpg',
+        'Business Oxford Shirt': 'business-shirt.jpg',
+        'Custom T-Shirt': 'classic-tshirt.jpg',
+        'Quarter-Zip Pullover': 'quarter-zip-pullover.jpg',
+        'Corporate Softshell Jacket': 'softshell-jacket.jpg',
+        'Embroidered Cap': 'structured-cap.jpg',
+        'Branded Hoodie': 'pullover-hoodie.jpg',
+        'Performance Vest': 'performance-vest.jpg'
+      };
+      
+      const filename = imageMap[productObj.name] || 
+        productObj.name.toLowerCase().replace(/\s+/g, '-') + '.jpg';
+      
+      return {
+        ...productObj,
+        imageUrl: `https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/${filename}`
+      };
+    });
+    
+    res.json(transformedProducts);
+  } catch (error) {
+    console.error('Error fetching clothing products:', error);
+    res.status(500).json({ error: 'Failed to fetch clothing products' });
+  }
+};
 
 // @desc    Fetch fabric products
 // @route   GET /api/products/fabric
@@ -249,4 +323,9 @@ export const getFabrics = async (req: Request, res: Response) => {
     console.error('Error fetching fabrics:', error);
     res.status(500).json({ error: 'Failed to fetch fabrics' });
   }
+};
+
+// Then add a new function specifically for clothing products if needed:
+export const getClothingProductById = async (req: Request, res: Response) => {
+  return getProductById(req, res, 'clothing');
 };

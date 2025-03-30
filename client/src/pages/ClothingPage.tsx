@@ -1,10 +1,86 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { fetchClothingProducts } from '../api/productApi';
-import { ShoppingCart, Filter, Upload, X, Check } from 'lucide-react';
+import { Filter, ShoppingCart, X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+// Update the imports to include the API response type
+import { ClothingProduct, ClothingProductApiResponse, Product } from '../types/product';
+import { toast } from 'react-hot-toast';
+// Add this import at the top of the file
 import ClothingCard from '../components/product/ClothingCard';
-import { ClothingProduct } from '../types/product';
+
+// At the top of your ClothingPage.tsx file, keep these constants:
+const S3_BUCKET_URL = 'https://fabrix-assets.s3.us-east-1.amazonaws.com';
+const DEFAULT_PLACEHOLDER = `${S3_BUCKET_URL}/placeholders/no-image.jpg`;
+
+// Update the sanitizeImageUrl function to use direct S3 URLs
+const sanitizeImageUrl = (url: string): string => {
+  // If no URL provided, use default placeholder
+  if (!url) return DEFAULT_PLACEHOLDER;
+
+  // For full URLs
+  if (url.match(/^https?:\/\//)) {
+    return url; // Keep full URLs as they are
+  }
+  
+  // For partial paths, construct the full S3 URL
+  const cleanPath = url.replace(/^\/+/, ''); // Remove leading slashes
+  return `${S3_BUCKET_URL}/${cleanPath}`;
+};
+
+// Add a utility function to fix URLs before they cause issues
+const sanitizeUrl = (url: string): string => {
+  if (!url) return DEFAULT_PLACEHOLDER;
+  
+  let cleanUrl = url;
+  
+  // Fix double protocol
+  if (cleanUrl.startsWith('https://https://')) {
+    cleanUrl = cleanUrl.replace('https://https://', 'https://');
+  }
+  
+  // Fix duplicate domains
+  if (cleanUrl.includes('.s3.us-east-1.amazonaws.com.s3.us-east-1.amazonaws.com')) {
+    cleanUrl = cleanUrl.replace('.s3.us-east-1.amazonaws.com.s3.us-east-1.amazonaws.com', 
+                              '.s3.us-east-1.amazonaws.com');
+  }
+  
+  return cleanUrl;
+};
+
+// Update this function with the correct working URLs
+const getProductImageUrl = (productName: string): string => {
+  const productMap: Record<string, string> = {
+    'Premium Polo Shirt': 'premium-polo-shirt.jpg',
+    'Business Oxford Shirt': 'business-shirt.jpg',
+    'Custom T-Shirt': 'classic-tshirt.jpg',
+    'Quarter-Zip Pullover': 'quarter-zip-pullover.jpg',
+    'Corporate Softshell Jacket': 'softshell-jacket.jpg',
+    'Embroidered Cap': 'structured-cap.jpg',
+    'Branded Hoodie': 'pullover-hoodie.jpg',
+    'Performance Vest': 'performance-vest.jpg'
+  };
+
+  const fileName = productMap[productName] || productName.toLowerCase().replace(/\s+/g, '-') + '.jpg';
+  return `https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/${fileName}`;
+};
+
+// Removed unused fixMalformedUrl function to resolve the compile error
+
+// Add this function near the top of the file with your other utility functions
+// Removed unused debugS3Image function to resolve the compile error
+
+const debugMissingImages = (productName: string, imageUrl: string) => {
+  fetch(imageUrl, { method: 'HEAD' })
+    .then(response => {
+      if (!response.ok) {
+        console.error(`❌ Missing image for ${productName}: ${imageUrl}`);
+      }
+    })
+    .catch(() => {
+      console.error(`❌ Error checking image for ${productName}: ${imageUrl}`);
+    });
+};
 
 // Color options with hex values
 const colorOptions = [
@@ -20,33 +96,17 @@ const colorOptions = [
   { name: 'Pink', value: 'pink', hex: '#ec4899' },
 ];
 
-// Fix for the formatPrice function
-const formatPrice = (price: number | undefined | null): string => {
-  if (price === undefined || price === null) return '0.00';
+// Format price helper function
+const formatPrice = (price: number | undefined): string => {
+  if (price === undefined || isNaN(price)) {
+    return '0.00'; // Default value when price is undefined
+  }
   return price.toFixed(2);
 };
 
 const ClothingPage = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { addItem } = useCart();
-  
-  // Check if we have a generated logo from the logo generator
-  const [logoFromGenerator, setLogoFromGenerator] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const hasLogo = params.get('withLogo');
-    
-    if (hasLogo === 'true') {
-      const storedLogo = sessionStorage.getItem('generatedLogo');
-      if (storedLogo) {
-        setLogoFromGenerator(storedLogo);
-        // Remove the query parameter without reloading the page
-        navigate('/clothing', { replace: true });
-      }
-    }
-  }, [location, navigate]);
+  const { addToCart } = useCart();
   
   // Product state
   const [products, setProducts] = useState<ClothingProduct[]>([]);
@@ -61,43 +121,118 @@ const ClothingPage = () => {
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [showFilters, setShowFilters] = useState(false);
-  
-  // Selected product state for customization
+
+  // Modal states
   const [selectedProduct, setSelectedProduct] = useState<ClothingProduct | null>(null);
-  const [customization, setCustomization] = useState({
-    size: '',
-    color: '',
-    fabric: '',
-    quantity: 50,
-    logoUrl: logoFromGenerator || '',
-    logoPosition: 'left-chest',
-    notes: '',
-  });
+  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedSize, setSelectedSize] = useState<string>('');
+  const [quantity, setQuantity] = useState(1);
+  const [showProductModal, setShowProductModal] = useState(false);
+
+  // Add these state variables inside the ClothingPage component
+  const [sortBy, setSortBy] = useState<string>('name'); // Default sort by name
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc'); // Default sort ascending
   
-  // Logo upload state
-  const [, setUploadedLogo] = useState<string | null>(null);
-  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
-  
+  // Add this function to handle sort changes
+  const handleSortChange = (field: string) => {
+    if (sortBy === field) {
+      // If clicking the same field, toggle direction
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new field, set it as sortBy and default to ascending
+      setSortBy(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Helper function to render sort icons
+  const renderSortIcon = (field: string) => {
+    if (sortBy !== field) {
+      return <ArrowUpDown size={16} className="ml-1 text-gray-400" />;
+    }
+    
+    return sortDirection === 'asc' 
+      ? <ArrowUp size={16} className="ml-1 text-teal-600" />
+      : <ArrowDown size={16} className="ml-1 text-teal-600" />;
+  };
+
+  // Add this function to sort the products
+  const getSortedProducts = () => {
+    // Start with filtered products
+    return [...filteredProducts].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'basePrice':
+          const priceA = Number(a.basePrice) || 0;
+          const priceB = Number(b.basePrice) || 0;
+          comparison = priceA - priceB;
+          break;
+        case 'gender':
+          // Sort by first gender in the array
+          const genderA = a.gender[0] || '';
+          const genderB = b.gender[0] || '';
+          comparison = genderA.localeCompare(genderB);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      // Apply sort direction
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
   // Load products on initial render
   useEffect(() => {
     const loadProducts = async () => {
       setLoading(true);
-      setError(null); // Clear previous errors
+      setError(null);
       
       try {
-        console.log('Attempting to fetch clothing products...');
-        const data = await fetchClothingProducts(); // This might be failing
-        console.log('Raw API response:', data); // Add this line
+        console.log('Fetching clothing products...');
+        // Explicitly type the API response
+        const data: ClothingProductApiResponse[] = await fetchClothingProducts();
+        console.log('Raw API response:', data);
         
         if (data && Array.isArray(data)) {
-          setProducts(data);
-          console.log(`Successfully loaded ${data.length} clothing products`);
+          // Transform data to ensure all products have the expected structure
+          const transformedProducts: ClothingProduct[] = data.map(apiProduct => {
+            // Check if the product already has an image URL
+            let imageUrl = apiProduct.imageUrl;
+            
+            if (!imageUrl) {
+              // Only generate a URL if one doesn't exist
+              imageUrl = getProductImageUrl(apiProduct.name);
+            }
+            
+            debugMissingImages(apiProduct.name, imageUrl);
+            
+            return {
+              ...apiProduct,
+              id: apiProduct.id || String(Math.random()),
+              imageUrl: sanitizeUrl(imageUrl), // Set the image URL only once
+              basePrice: apiProduct.basePrice || apiProduct.price || 0,
+              gender: apiProduct.gender || ['unisex'],
+              availableSizes: apiProduct.availableSizes || ['S', 'M', 'L', 'XL'],
+              availableColors: apiProduct.availableColors || ['White', 'Black'],
+              fabricOptions: apiProduct.fabricOptions || ['Cotton'],
+              minOrderQuantity: apiProduct.minOrderQuantity || 50,
+              type: 'clothing' as 'clothing'
+            } as ClothingProduct;
+          });
+          
+          setProducts(transformedProducts);
+          console.log('Transformed products:', transformedProducts);
         } else {
           throw new Error('Invalid data format received from API');
         }
       } catch (err: any) {
         console.error('Error loading products:', err);
-        // Error handling...
+        setError(err.message || 'Failed to load products');
       } finally {
         setLoading(false);
       }
@@ -106,213 +241,409 @@ const ClothingPage = () => {
     loadProducts();
   }, []);
   
-  // Update customization when a logo is received from generator
   useEffect(() => {
-    if (logoFromGenerator) {
-      setCustomization(prev => ({
-        ...prev,
-        logoUrl: logoFromGenerator
-      }));
+    // Log any products missing basePrice
+    const productsWithoutBasePrice = products.filter(p => p.basePrice === undefined);
+    if (productsWithoutBasePrice.length > 0) {
+      console.warn('Products missing basePrice:', productsWithoutBasePrice);
     }
-  }, [logoFromGenerator]);
+  }, [products]);
+
+  // Add this after your useEffect that loads products
+  useEffect(() => {
+    const testImages = async () => {
+      console.log("Testing direct image URLs...");
+      
+      // Test a few specific image URLs directly
+      const testUrls = [
+        "https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/premium-polo-shirt.jpg",
+        "https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/business-shirt.jpg"
+      ];
+      
+      for (const url of testUrls) {
+        try {
+          const response = await fetch(url, { method: 'HEAD' });
+          console.log(`URL ${url}: ${response.ok ? 'OK' : 'Failed'} (${response.status})`);
+        } catch (err) {
+          console.error(`Error testing ${url}:`, err);
+        }
+      }
+    };
+    
+    if (process.env.NODE_ENV === 'development') {
+      testImages();
+    }
+  }, []);
+  
+  /*
+  useEffect(() => {
+    const testImages = async () => {
+      if (!products || products.length === 0) return;
+      
+      console.log("Testing product image URLs...");
+      
+      // Test the actual URLs from your products
+      for (const product of products) {
+        const url = fixMalformedUrl(product.imageUrl);
+        try {
+          const response = await fetch(url, { method: 'HEAD' });
+          console.log(`Product ${product.name} image (${url}): ${response.ok ? 'OK' : 'Failed'} (${response.status})`);
+        } catch (err) {
+          console.error(`Error testing ${url}:`, err);
+        }
+      }
+    };
+    
+    if (process.env.NODE_ENV === 'development' && products.length > 0) {
+      testImages();
+    }
+  }, [products]);
+  */
+
+  useEffect(() => {
+    const testImages = async () => {
+      if (!products || products.length === 0) return;
+      
+      console.log("Testing product image URLs via img elements instead of fetch...");
+      
+      // Create a safer testing function that doesn't trigger CORS
+      const testImageUrl = (url: string, productName: string) => {
+        console.log(`Testing ${productName} image: ${url}`);
+        const img = new Image();
+        img.onload = () => console.log(`✅ ${productName} image loaded successfully`);
+        img.onerror = () => console.error(`❌ ${productName} image failed to load`);
+        img.src = url;
+      };
+      
+      // Test the actual URLs from your products
+      for (const product of products) {
+        testImageUrl(product.imageUrl || '', product.name);
+      }
+    };
+    
+    if (process.env.NODE_ENV === 'development' && products.length > 0) {
+      testImages();
+    }
+  }, [products]);
+
+  useEffect(() => {
+    if (!products.length) return;
+    
+    // Test the first few image URLs
+    products.slice(0, 3).forEach(product => {
+      console.log(`Testing image URL for ${product.name}: ${product.imageUrl}`);
+      
+      // Try to fetch the image to verify it exists
+      fetch(product.imageUrl, { method: 'HEAD' })
+        .then(response => {
+          if (response.ok) {
+            console.log(`✅ Image URL verified for ${product.name}`);
+          } else {
+            console.error(`❌ Image URL failed for ${product.name}: ${response.status}`);
+          }
+        })
+        .catch(error => {
+          console.error(`❌ Image URL error for ${product.name}:`, error);
+        });
+    });
+  }, [products]);
   
   // Filter products based on selections
-  const filteredProducts = products.filter((product) => {
-    // Filter by gender
-    if (selectedGender.length > 0 && !product.gender.some(g => selectedGender.includes(g))) {
-      return false;
+  const filteredProducts = useMemo(() => products.filter((product) => {
+    // Only apply filters if they are selected
+    
+    // Gender filter
+    if (selectedGender.length > 0) {
+      // Check if product has at least one gender that matches the selected genders
+      const hasMatch = product.gender.some(g => 
+        selectedGender.includes(g.toLowerCase())
+      );
+      if (!hasMatch) return false;
     }
     
-    // Filter by size
-    if (selectedSizes.length > 0 && !product.availableSizes.some(s => selectedSizes.includes(s))) {
-      return false;
+    // Size filter
+    if (selectedSizes.length > 0) {
+      const hasMatch = product.availableSizes.some(s => 
+        selectedSizes.includes(s)
+      );
+      if (!hasMatch) return false;
     }
     
-    // Filter by color
-    if (selectedColors.length > 0 && !product.availableColors.some(c => selectedColors.includes(c))) {
-      return false;
+    // Color filter
+    if (selectedColors.length > 0) {
+      const hasMatch = product.availableColors.some(c => 
+        selectedColors.includes(c.toLowerCase())
+      );
+      if (!hasMatch) return false;
     }
     
-    // Filter by fabric
-    if (selectedFabrics.length > 0 && !product.fabricOptions.some(f => selectedFabrics.includes(f))) {
-      return false;
+    // Fabric filter
+    if (selectedFabrics.length > 0) {
+      const hasMatch = product.fabricOptions.some(f => 
+        selectedFabrics.includes(f.toLowerCase())
+      );
+      if (!hasMatch) return false;
     }
     
-    // Filter by price
-    if (product.basePrice < minPrice || product.basePrice > maxPrice) {
+    // Price filter
+    if ((product.basePrice ?? 0) < minPrice || (product.basePrice ?? 0) > maxPrice) {
       return false;
     }
     
     return true;
-  });
-
-  console.log('Products state after fetch:', products);
+  }), [products, selectedGender, selectedSizes, selectedColors, selectedFabrics, minPrice, maxPrice]);
+  
   console.log('Filtered products:', filteredProducts);
   
-  // Toggle selection of filter items
+  // Get sorted products
+  const sortedProducts = getSortedProducts();
+  
+  // Add this to debug sort changes
+  useEffect(() => {
+    console.log(`Sort changed to: ${sortBy} ${sortDirection}`);
+    console.log('First 3 sorted products:', sortedProducts.slice(0, 3).map(p => p.name));
+  }, [sortBy, sortDirection, sortedProducts]);
+
+  // Toggle filter selection
   const toggleFilter = (
     item: string,
     selected: string[],
     setSelected: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
     if (selected.includes(item)) {
-      setSelected(selected.filter((i) => i !== item));
+      setSelected(selected.filter(i => i !== item));
     } else {
       setSelected([...selected, item]);
     }
   };
   
-  // Handle logo upload
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (!file) return;
-    
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setLogoUploadError('Logo file too large. Maximum size is 5MB.');
-      return;
-    }
-    
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
-    if (!validTypes.includes(file.type)) {
-      setLogoUploadError('Invalid file type. Please upload JPEG, PNG, or SVG.');
-      return;
-    }
-    
-    // Read and set the file
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setUploadedLogo(event.target.result as string);
-        setCustomization(prev => ({
-          ...prev,
-          logoUrl: event.target?.result as string
-        }));
-        setLogoUploadError(null);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-  
-  
-  // Handle adding to cart
-  const handleAddToCart = () => {
-    if (!selectedProduct) return;
-    
-    // Calculate total price based on quantity and customizations
-    const totalPrice = selectedProduct.basePrice * customization.quantity;
-    
-    // Create cart item
-    const cartItem = {
-      id: `${selectedProduct.id}-${Date.now()}`,
-      type: 'clothing' as const,
-      name: selectedProduct.name,
-      price: totalPrice,
-      quantity: 1, // We're adding one item that represents the bulk order
-      imageUrl: selectedProduct.imageUrl,
-      size: customization.size,
-      color: customization.color,
-      fabric: customization.fabric,
-      gender: selectedProduct.gender[0],
-      logoUrl: customization.logoUrl,
-      orderQuantity: customization.quantity,
-      logoPosition: customization.logoPosition,
-      notes: customization.notes
-    };
-    
-    // Add to cart
-    addItem(cartItem);
-    
-    // Close modal
-    setSelectedProduct(null);
-    
-    // Show success message or redirect to cart
-    navigate('/cart');
+  const openProductModal = (product: ClothingProduct) => {
+    setSelectedProduct(product);
+    setSelectedColor(product.availableColors[0] || '');
+    setSelectedSize(product.availableSizes[0] || '');
+    setQuantity(product.minOrderQuantity || 1);
+    setShowProductModal(true);
   };
 
-  const navigateToProduct = (product: ClothingProduct) => {
-    navigate(`/clothing/${product.id}`);
-  };
+  // Update the navigateToProduct function with better error handling
+  // Removed unused navigateToProduct function to resolve the compile error
 
-  // Add this debugging section at the top of your component, before the return statement
-  // Debugging S3 access
-  useEffect(() => {
-    const testS3Access = async () => {
-      const s3Url = 'https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/business-shirt.jpg';
-      
-      console.log('Testing S3 access with:', s3Url);
-      
-      try {
-        // Test if we can load the image
-        const response = await fetch(s3Url, { method: 'HEAD' });
-        console.log('S3 test response status:', response.status);
-        console.log('S3 test response headers:', response.headers);
-        
-        if (response.ok) {
-          console.log('✅ S3 access test successful');
-        } else {
-          console.error('⚠️ S3 access test failed with status:', response.status);
-        }
-      } catch (error) {
-        console.error('⚠️ S3 access test error:', error);
-      }
-    };
+  // Component for product card to ensure consistent display
+
+  const ProductModal = () => {
+    if (!selectedProduct) return null;
     
-    testS3Access();
-  }, []);
-
-  // Helper function to construct S3 URLs
-  const getS3ImageUrl = (path: string): string => {
-    return `https://fabrix-assets.s3.us-east-1.amazonaws.com/${path}`;
-  };
-
-  // Replace your existing test useEffect with this improved version
-  useEffect(() => {
-    // Test multiple image paths with proper debugging
-    const testAllProductImages = async () => {
-      const testImagePaths = [
-        'clothing/business-shirt.jpg',      // Already working
-        'clothing/classic-tshirt.jpg',      // Need to test
-        'clothing/premium-polo-shirt.jpg',  // Need to test
-        'clothing/pullover-hoodie.jpg',     // Need to test
-        'clothing/quarter-zip-pullover.jpg',// Need to test
-        'clothing/softshell-jacket.jpg',    // Need to test
-        'clothing/structured-cap.jpg',      // Need to test
-        'clothing/performance-vest.jpg'     // Need to test
-      ];
-      
-      console.log('Testing all product images:');
-      
-      // More reliable way to test images
-      for (const path of testImagePaths) {
-        const url = getS3ImageUrl(path);
-        console.log(`Testing image: ${url}`);
-        
-        try {
-          // We'll use fetch instead of Image() to get more detailed errors
-          const response = await fetch(url, { method: 'HEAD' });
-          
-          if (response.ok) {
-            console.log(`✅ Successfully loaded: ${path}`);
-          } else {
-            console.error(`❌ Failed to load: ${path} (Status: ${response.status})`);
-            // Test the image with an Image element as backup
-            const img = new Image();
-            img.onload = () => console.log(`🔄 Image element loaded: ${path}`);
-            img.onerror = () => console.error(`🔄 Image element failed: ${path}`);
-            img.src = url;
+    const handleAddToCart = () => {
+      if (selectedProduct && selectedColor && selectedSize) {
+        addToCart({
+          id: selectedProduct.id,
+          type: 'clothing',
+          name: selectedProduct.name,
+          price: selectedProduct.basePrice || 0,
+          quantity: quantity,
+          imageUrl: selectedProduct.imageUrl || DEFAULT_PLACEHOLDER, // Use DEFAULT_PLACEHOLDER
+          options: {
+            color: selectedColor,
+            size: selectedSize
           }
-        } catch (error) {
-          console.error(`❌ Error testing ${path}:`, error);
-        }
+        });
+        toast.success(`Added ${quantity} ${selectedProduct.name} to cart`);
+        setShowProductModal(false);
+      } else {
+        toast.error('Please select all options');
       }
     };
     
-    testAllProductImages();
-  }, []);
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
+          {/* Close button */}
+          <button 
+            onClick={() => setShowProductModal(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white"
+          >
+            <X size={24} />
+          </button>
+          
+          <div className="flex flex-col md:flex-row">
+            {/* Product image */}
+            <div className="md:w-1/2 p-6">
+              <img 
+                src={sanitizeImageUrl(selectedProduct.imageUrl)}
+                alt={selectedProduct.name}
+                className="w-full h-auto object-cover rounded-lg"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  // Use S3 placeholder directly
+                  target.src = "https://fabrix-assets.s3.us-east-1.amazonaws.com/placeholders/no-image.jpg";
+                  target.onerror = null;
+                }}
+              />
+            </div>
+            
+            {/* Product details */}
+            <div className="md:w-1/2 p-6">
+              <h2 className="text-2xl font-semibold text-white mb-2">{selectedProduct.name}</h2>
+              <p className="text-teal-400 text-xl mb-6">${formatPrice(selectedProduct.basePrice)} per item</p>
+              
+              {/* Color selection */}
+              <div className="mb-6">
+                <h3 className="text-white font-medium mb-3">Select Color</h3>
+                <div className="grid grid-cols-5 gap-3">
+                  {selectedProduct.availableColors.map(color => {
+                    const colorOption = colorOptions.find(c => c.name === color || c.value === color.toLowerCase());
+                    const hexColor = colorOption?.hex || '#CCCCCC';
+                    
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        className={`w-10 h-10 rounded-full border-2 ${
+                          selectedColor === color ? 'border-teal-500 ring-2 ring-teal-500' : 'border-gray-600'
+                        }`}
+                        style={{
+                          backgroundColor: hexColor,
+                          boxShadow: color.toLowerCase() === 'white' ? 'inset 0 0 0 1px #4b5563' : 'none',
+                        }}
+                        title={color}
+                      >
+                        {selectedColor === color && (
+                          <div className="flex items-center justify-center h-full">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-gray-300">Selected: {selectedColor}</p>
+              </div>
+              
+              {/* Size selection */}
+              <div className="mb-6">
+                <h3 className="text-white font-medium mb-3">Select Size</h3>
+                <div className="grid grid-cols-4 gap-2">
+                  {selectedProduct.availableSizes.map(size => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`border rounded-md px-3 py-2 text-center ${
+                        selectedSize === size
+                          ? 'bg-teal-900 border-teal-500 text-teal-300'
+                          : 'border-gray-600 text-gray-200 hover:bg-gray-700'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Quantity selection */}
+              <div className="mb-6">
+                <h3 className="text-white font-medium mb-3">Quantity</h3>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setQuantity(Math.max(selectedProduct.minOrderQuantity || 1, quantity - 1))}
+                    className="bg-gray-700 hover:bg-gray-600 text-white rounded-l-md px-4 py-2 font-bold"
+                    disabled={quantity <= (selectedProduct.minOrderQuantity || 1)}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (!isNaN(value) && value >= (selectedProduct.minOrderQuantity || 1)) {
+                        setQuantity(value);
+                      }
+                    }}
+                    min={selectedProduct.minOrderQuantity || 1}
+                    className="bg-gray-700 text-white text-center px-3 py-2 w-20 border-t border-b border-gray-600"
+                  />
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="bg-gray-700 hover:bg-gray-600 text-white rounded-r-md px-4 py-2 font-bold"
+                  >
+                    +
+                  </button>
+                  <span className="ml-3 text-gray-300">
+                    Minimum: {selectedProduct.minOrderQuantity || 1}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Total price */}
+              <div className="mb-6 p-4 bg-gray-700 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-white">Total:</span>
+                  <span className="text-teal-400 text-xl font-bold">
+                    ${formatPrice((selectedProduct.basePrice || 0) * quantity)}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Add to cart button */}
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-grow bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-md font-medium transition-colors"
+                >
+                  Add to Cart
+                </button>
+                <button
+                  onClick={() => navigate(`/clothing/${selectedProduct.id}`)}
+                  className="bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-md transition-colors"
+                >
+                  View Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   
+
+  const getCorrectImageUrl = (product: Product): string => {
+    // If product has no name, return default placeholder
+    if (!product || !product.name) {
+      return DEFAULT_PLACEHOLDER;
+    }
+  
+    // If the product already has a properly formatted imageUrl, use that
+    // Improved URL detection - make sure it's a valid URL protocol
+    if (product.imageUrl && /^https?:\/\//i.test(product.imageUrl)) {
+      return product.imageUrl;
+    }
+    
+    // If product has images array, use the first image
+    if (product.images && product.images.length > 0 && product.images[0]) {
+      return product.images[0]; // Use the first image from the product data
+    }
+    
+    // Fallback mapping based on your server data
+    const imageMap: Record<string, string> = {
+      'Premium Polo Shirt': 'premium-polo-shirt.jpg',
+      'Business Oxford Shirt': 'business-shirt.jpg',
+      'Custom T-Shirt': 'classic-tshirt.jpg',
+      'Quarter-Zip Pullover': 'quarter-zip-pullover.jpg',
+      'Corporate Softshell Jacket': 'softshell-jacket.jpg',
+      'Embroidered Cap': 'structured-cap.jpg',
+      'Branded Hoodie': 'pullover-hoodie.jpg',
+      'Performance Vest': 'performance-vest.jpg'
+    };
+    
+    const filename = imageMap[product.name] || 
+      product.name.toLowerCase().replace(/\s+/g, '-') + '.jpg';
+    
+    return `https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/${filename}`;
+  };
+
   return (
     <div className="container mx-auto px-4 py-12 bg-gray-900 text-white">
       <h1 className="text-3xl font-bold mb-8 text-center text-white">Custom Clothing</h1>
@@ -346,13 +677,7 @@ const ClothingPage = () => {
                   <input
                     type="checkbox"
                     checked={selectedGender.includes(gender.toLowerCase())}
-                    onChange={() =>
-                      toggleFilter(
-                        gender.toLowerCase(),
-                        selectedGender,
-                        setSelectedGender
-                      )
-                    }
+                    onChange={() => toggleFilter(gender.toLowerCase(), selectedGender, setSelectedGender)}
                     className="rounded border-gray-600 text-teal-500 focus:ring-teal-500 bg-gray-700"
                   />
                   <span className="text-gray-200">{gender}</span>
@@ -392,8 +717,8 @@ const ClothingPage = () => {
             <div className="grid grid-cols-5 gap-2">
               {colorOptions.map((color) => (
                 <label
-                  key={color.value} // Adding a proper key here
-                  className={`flex flex-col items-center cursor-pointer`}
+                  key={color.value}
+                  className="flex flex-col items-center cursor-pointer"
                   title={color.name}
                 >
                   <div
@@ -409,19 +734,26 @@ const ClothingPage = () => {
                   >
                     {selectedColors.includes(color.value) && (
                       <div className="flex items-center justify-center h-full">
-                        <Check
-                          size={16}
-                          className={color.value === 'white' ? 'text-black' : 'text-white'}
-                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke={color.value === 'white' ? '#000000' : '#ffffff'}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
                       </div>
                     )}
                   </div>
                   <input
                     type="checkbox"
                     checked={selectedColors.includes(color.value)}
-                    onChange={() =>
-                      toggleFilter(color.value, selectedColors, setSelectedColors)
-                    }
+                    onChange={() => toggleFilter(color.value, selectedColors, setSelectedColors)}
                     className="sr-only"
                   />
                   <span className="text-xs mt-1 text-gray-300">{color.name}</span>
@@ -440,13 +772,7 @@ const ClothingPage = () => {
                     <input
                       type="checkbox"
                       checked={selectedFabrics.includes(fabric.toLowerCase())}
-                      onChange={() =>
-                        toggleFilter(
-                          fabric.toLowerCase(),
-                          selectedFabrics,
-                          setSelectedFabrics
-                        )
-                      }
+                      onChange={() => toggleFilter(fabric.toLowerCase(), selectedFabrics, setSelectedFabrics)}
                       className="rounded border-gray-600 text-teal-500 focus:ring-teal-500 bg-gray-700"
                     />
                     <span className="text-gray-200">{fabric}</span>
@@ -459,11 +785,9 @@ const ClothingPage = () => {
           {/* Price Range Filter */}
           <div className="mb-6">
             <h3 className="font-medium mb-3 text-white">Price Range (per item)</h3>
-            <div className="flex items-center space-x-4">
-              <div>
-                <label htmlFor="minPrice" className="sr-only">
-                  Minimum Price
-                </label>
+            <div className="flex items-center justify-between">
+              <div className="w-[45%]">
+                <label htmlFor="minPrice" className="sr-only">Minimum Price</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="text-gray-400">$</span>
@@ -479,11 +803,11 @@ const ClothingPage = () => {
                   />
                 </div>
               </div>
-              <span className="text-gray-300">to</span>
-              <div>
-                <label htmlFor="maxPrice" className="sr-only">
-                  Maximum Price
-                </label>
+              
+              <span className="text-gray-300 flex-shrink-0 mx-2">to</span>
+              
+              <div className="w-[45%]">
+                <label htmlFor="maxPrice" className="sr-only">Maximum Price</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="text-gray-400">$</span>
@@ -517,8 +841,42 @@ const ClothingPage = () => {
           </button>
         </div>
         
-        {/* Product Grid */}
+        {/* Add this right after the filters section but before the product grid */}
         <div className="lg:w-3/4">
+          {/* Sorting Controls - Improved with FabricPage styling */}
+          <div className="bg-gray-800 rounded-xl shadow-md mb-6 p-4 border border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-white">
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
+              </h2>
+              <div className="flex space-x-4">
+                <button 
+                  onClick={() => handleSortChange('name')}
+                  className={`flex items-center px-3 py-1 rounded ${
+                    sortBy === 'name' 
+                      ? 'bg-teal-900 text-teal-300 font-medium' 
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  Name
+                  {renderSortIcon('name')}
+                </button>
+                <button 
+                  onClick={() => handleSortChange('basePrice')}
+                  className={`flex items-center px-3 py-1 rounded ${
+                    sortBy === 'basePrice' 
+                      ? 'bg-teal-900 text-teal-300 font-medium' 
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  Price
+                  {renderSortIcon('basePrice')}
+                </button>
+              </div>
+            </div>
+          </div>
+        
+          {/* Product Grid - Update to use sortedProducts instead of filteredProducts */}
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
@@ -548,356 +906,141 @@ const ClothingPage = () => {
               </button>
             </div>
           ) : (
+            // Replace ClothingCardList with a Grid of individual ClothingCard components
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <ClothingCard 
-                  key={product.id} // Add this line to provide a unique key
-                  product={product}
-                  onClick={navigateToProduct}
-                />
-              ))}
+              {sortedProducts.map(product => {
+                // Make sure we have a valid product with name and image
+                const safeProduct = {
+                  ...product,
+                  imageUrl: product.imageUrl || DEFAULT_PLACEHOLDER
+                };
+
+                return (
+                  <ClothingCard
+                    key={safeProduct.id}
+                    product={safeProduct}
+                    onClick={openProductModal}
+                  />
+                );
+              })}
             </div>
           )}
-        </div>
-      </div>
-      
-      {/* Product Customization Modal */}
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto text-white border border-gray-700">
-            <div className="sticky top-0 bg-gray-800 z-10 p-6 border-b border-gray-700 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">Customize Your Order</h2>
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="text-gray-300 hover:text-white"
-                aria-label="Close"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Product Preview */}
-                <div>
-                  <div className="bg-gray-900 rounded-lg h-80 flex items-center justify-center mb-4 relative overflow-hidden border border-gray-700">
-                    <img
-                      src={selectedProduct.imageUrl}
-                      alt={selectedProduct.name}
-                      className="max-w-full max-h-full object-contain"
-                    />
-                    
-                    {/* Logo Preview */}
-                    {customization.logoUrl && (
-                      <div
-                        className={`absolute w-16 h-16 ${
-                          customization.logoPosition === 'left-chest'
-                            ? 'top-12 left-12'
-                            : customization.logoPosition === 'right-chest'
-                            ? 'top-12 right-12'
-                            : customization.logoPosition === 'center-chest'
-                            ? 'top-12 left-1/2 transform -translate-x-1/2'
-                            : 'bottom-12 left-1/2 transform -translate-x-1/2'
-                        }`}
-                      >
-                        <img
-                          src={customization.logoUrl}
-                          alt="Logo"
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-bold text-white">{selectedProduct.name}</h3>
-                    <p className="text-teal-400">${formatPrice(selectedProduct.basePrice)} per item</p>
-                  </div>
-                  
-                  {/* Logo Upload/Select */}
-                  <div className="mb-6">
-                    <h4 className="font-medium mb-2 text-white">Add Your Logo</h4>
-                    
-                    <div className="space-y-4">
-                      {/* Upload Logo */}
-                      <div className="border border-gray-700 rounded-md p-4">
-                        <label className="flex flex-col items-center cursor-pointer">
-                          <div className="bg-gray-900 rounded-md w-full py-8 flex flex-col items-center justify-center">
-                            <Upload size={24} className="text-gray-400 mb-2" />
-                            <span className="text-sm text-gray-400">
-                              Click to upload logo (JPG, PNG, SVG)
-                            </span>
-                          </div>
-                          <input
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.svg"
-                            className="hidden"
-                            onChange={handleLogoUpload}
-                          />
-                        </label>
-                        
-                        {logoUploadError && (
-                          <p className="text-red-400 text-sm mt-2">{logoUploadError}</p>
-                        )}
-                      </div>
-                      
-                      {/* Or use generated logo */}
-                      {logoFromGenerator && (
-                        <div className="border border-gray-700 rounded-md p-4">
-                          <p className="text-sm text-gray-300 mb-2">Or use your generated logo:</p>
-                          <div className="flex items-center">
-                            <div className="w-12 h-12 bg-gray-900 rounded-md overflow-hidden mr-4 border border-gray-700">
-                              <img
-                                src={logoFromGenerator}
-                                alt="Generated Logo"
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                            <button
-                              onClick={() => {
-                                setCustomization(prev => ({
-                                  ...prev,
-                                  logoUrl: logoFromGenerator
-                                }));
-                              }}
-                              className="text-teal-400 text-sm font-medium hover:text-teal-300"
-                            >
-                              Use this logo
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Logo Position */}
-                      {customization.logoUrl && (
-                        <div>
-                          <h4 className="font-medium mb-2 text-white">Logo Position</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              { id: 'left-chest', name: 'Left Chest' },
-                              { id: 'right-chest', name: 'Right Chest' },
-                              { id: 'center-chest', name: 'Center Chest' },
-                              { id: 'back', name: 'Back' },
-                            ].map((position) => (
-                              <label
-                                key={`logo-position-${position.id}`}
-                                className={`border rounded-md px-3 py-2 text-center cursor-pointer transition-colors ${
-                                  customization.logoPosition === position.id
-                                    ? 'bg-teal-900 border-teal-600 text-teal-300'
-                                    : 'border-gray-700 hover:bg-gray-700 text-gray-300'
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="logoPosition"
-                                  value={position.id}
-                                  checked={customization.logoPosition === position.id}
-                                  onChange={(e) =>
-                                    setCustomization((prev) => ({
-                                      ...prev,
-                                      logoPosition: e.target.value,
-                                    }))
-                                  }
-                                  className="sr-only"
-                                />
-                                {position.name}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Customization Form */}
-                <div>
-                  <div className="space-y-6">
-                    {/* Size Selection */}
-                    <div>
-                      <label htmlFor="size" className="block font-medium mb-2 text-white">
-                        Size
-                      </label>
-                      <select
-                        id="size"
-                        value={customization.size}
-                        onChange={(e) =>
-                          setCustomization((prev) => ({ ...prev, size: e.target.value }))
-                        }
-                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      >
-                        {selectedProduct.availableSizes.map((size, index) => (
-                          <option key={`size-${size}-${index}`} value={size}>
-                            {size}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {/* Color Selection */}
-                    <div>
-                      <label className="block font-medium mb-2 text-white">Color</label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {selectedProduct.availableColors.map((colorName, index) => {
-                          const colorOption = colorOptions.find(
-                            (c) => c.value === colorName.toLowerCase()
-                          );
-                          return (
-                            <label
-                              key={`color-select-${colorName}-${index}`} // This seems fine but verify
-                              className={`border rounded-md p-2 flex flex-col items-center cursor-pointer transition-colors ${
-                                customization.color === colorName
-                                  ? 'bg-gray-900 border-teal-500'
-                                  : 'border-gray-700 hover:bg-gray-700'
-                              }`}
-                            >
-                              <div
-                                className="w-8 h-8 rounded-full border border-gray-700 mb-1"
-                                style={{
-                                  backgroundColor: colorOption?.hex || '#CCCCCC',
-                                  boxShadow:
-                                    colorName.toLowerCase() === 'white'
-                                      ? 'inset 0 0 0 1px #4b5563'
-                                      : 'none',
-                                }}
-                              ></div>
-                              <input
-                                type="radio"
-                                name="color"
-                                value={colorName}
-                                checked={customization.color === colorName}
-                                onChange={(e) =>
-                                  setCustomization((prev) => ({
-                                    ...prev,
-                                    color: e.target.value,
-                                  }))
-                                }
-                                className="sr-only"
-                              />
-                              <span className="text-xs text-gray-300">{colorName}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    
-                    {/* Fabric Selection */}
-                    <div>
-                      <label htmlFor="fabric" className="block font-medium mb-2 text-white">
-                        Fabric
-                      </label>
-                      <select
-                        id="fabric"
-                        value={customization.fabric}
-                        onChange={(e) =>
-                          setCustomization((prev) => ({ ...prev, fabric: e.target.value }))
-                        }
-                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      >
-                        {selectedProduct.fabricOptions.map((fabric, index) => (
-                          <option key={`fabric-${fabric}-${index}`} value={fabric}>
-                            {fabric}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {/* Quantity */}
-                    <div>
-                      <label htmlFor="quantity" className="block font-medium mb-2 text-white">
-                        Quantity (Minimum {selectedProduct.minOrderQuantity} pcs)
-                      </label>
-                      <input
-                        type="number"
-                        id="quantity"
-                        min={selectedProduct.minOrderQuantity}
-                        step={10}
-                        value={customization.quantity}
-                        onChange={(e) =>
-                          setCustomization((prev) => ({
-                            ...prev,
-                            quantity: Math.max(
-                              selectedProduct.minOrderQuantity,
-                              parseInt(e.target.value)
-                            ),
-                          }))
-                        }
-                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      />
-                    </div>
-                    
-                    {/* Special Instructions */}
-                    <div>
-                      <label htmlFor="notes" className="block font-medium mb-2 text-white">
-                        Special Instructions (Optional)
-                      </label>
-                      <textarea
-                        id="notes"
-                        value={customization.notes}
-                        onChange={(e) =>
-                          setCustomization((prev) => ({ ...prev, notes: e.target.value }))
-                        }
-                        rows={3}
-                        className="w-full px-4 py-2 border border-gray-700 rounded-md bg-gray-700 text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                        placeholder="Any specific requirements for your order..."
-                      ></textarea>
-                    </div>
-                    
-                    {/* Total Price */}
-                    <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
-                      <div key="price-per-item" className="flex justify-between items-center mb-2">
-                        <span className="text-gray-300">Price per item:</span>
-                        <span className="text-white">${formatPrice(selectedProduct.basePrice)}</span>
-                      </div>
-                      <div key="quantity" className="flex justify-between items-center mb-2">
-                        <span className="text-gray-300">Quantity:</span>
-                        <span className="text-white">{customization.quantity} pcs</span>
-                      </div>
-                      <div key="total-price" className="flex justify-between items-center font-bold text-lg border-t border-gray-700 pt-2 mt-2">
-                        <span className="text-white">Total Price:</span>
-                        <span className="text-teal-400">${formatPrice(selectedProduct.basePrice * customization.quantity)}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Add to Cart Button */}
-                    <button
-                      onClick={handleAddToCart}
-                      className="w-full bg-teal-600 text-white py-3 px-4 rounded-md font-medium hover:bg-teal-700 transition-colors flex items-center justify-center"
-                    >
-                      <ShoppingCart size={20} className="mr-2" />
-                      Add to Cart
-                    </button>
-                    
-                    <p className="text-sm text-gray-400 text-center">
-                      Not ready to order? Visit our{' '}
-                      <Link to="/logo-generator" className="text-teal-400 hover:underline">
-                        Logo Generator
-                      </Link>{' '}
-                      to create a custom logo for your clothing.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          
+          <div className="mt-8 flex justify-center">
+            <Link
+              to="/cart"
+              className="bg-teal-600 hover:bg-teal-700 text-white py-2 px-6 rounded-md flex items-center space-x-2 transition-colors"
+            >
+              <ShoppingCart size={20} />
+              <span>View Cart</span>
+            </Link>
           </div>
         </div>
-      )}
+      </div>
       
       {/* Information Section */}
       <div className="mt-12 bg-gray-800 rounded-xl p-6">
         <h2 className="text-xl font-semibold mb-4 text-white">Bulk Ordering Information</h2>
         <p className="text-gray-300 mb-4">
           All clothing items require a minimum order quantity as specified per product.
-          Customization options include size, color, fabric type, and logo placement.
+          Custom embroidery and printing options are available for all products.
         </p>
-        <p className="text-gray-300">
-          Need a custom logo? Try our{' '}
-          <Link to="/logo-generator" className="text-teal-400 hover:underline">
-            Logo Generator
-          </Link>{' '}
-          or upload your own design. Production time is typically 2-3 weeks after order confirmation.
-        </p>
+        
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <h3 className="font-semibold text-white mb-2">Customization</h3>
+            <p className="text-gray-300 text-sm">
+              Add your logo or design to any product. Multiple placement options available.
+            </p>
+          </div>
+          
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <h3 className="font-semibold text-white mb-2">Bulk Discounts</h3>
+            <p className="text-gray-300 text-sm">
+              Volume discounts available for orders exceeding minimum quantities.
+            </p>
+          </div>
+          
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <h3 className="font-semibold text-white mb-2">Sample Orders</h3>
+            <p className="text-gray-300 text-sm">
+              Request samples before placing your bulk order. Contact our team for details.
+            </p>
+          </div>
+        </div>
       </div>
+      
+      {/* FAQ Section */}
+      <div className="mt-8 bg-gray-800 rounded-xl p-6">
+        <h2 className="text-xl font-semibold mb-4 text-white">Frequently Asked Questions</h2>
+        
+        <div className="space-y-4">
+          <div className="border-b border-gray-700 pb-4">
+            <h3 className="font-medium text-white mb-2">What is the typical turnaround time?</h3>
+            <p className="text-gray-300">
+              Production time typically ranges from 10-15 business days after artwork approval, 
+              depending on order quantity and customization complexity.
+            </p>
+          </div>
+          
+          <div className="border-b border-gray-700 pb-4">
+            <h3 className="font-medium text-white mb-2">Do you offer size exchanges?</h3>
+            <p className="text-gray-300">
+              Size exchanges for incorrect orders are handled on a case-by-case basis. 
+              We recommend ordering size samples before placing large bulk orders.
+            </p>
+          </div>
+          
+          <div className="border-b border-gray-700 pb-4">
+            <h3 className="font-medium text-white mb-2">What file formats do you accept for logos?</h3>
+            <p className="text-gray-300">
+              We accept vector files (.ai, .eps, .pdf) for best quality. High-resolution .png 
+              or .jpg files may also work depending on the application.
+            </p>
+          </div>
+          
+          <div className="pb-4">
+            <h3 className="font-medium text-white mb-2">Can I mix sizes and colors in my order?</h3>
+            <p className="text-gray-300">
+              Yes, you can mix sizes while maintaining the minimum order quantity. 
+              Color mixing may have additional requirements depending on the item.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Contact CTA */}
+      <div className="mt-8 bg-teal-900 rounded-xl p-8 text-center">
+        <h2 className="text-2xl font-semibold mb-4 text-white">Need Help With Your Bulk Order?</h2>
+        <p className="text-teal-100 mb-6 max-w-2xl mx-auto">
+          Our team of experts is ready to help you select the perfect clothing items for your brand.
+          Get in touch for personalized assistance with your order.
+        </p>
+        <Link
+          to="/contact"
+          className="inline-block bg-white text-teal-900 font-medium py-3 px-8 rounded-md hover:bg-teal-100 transition-colors"
+        >
+          Contact Our Team
+        </Link>
+      </div>
+      
+      {/* Test Image Loading - For Development Only */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-8 hidden">
+          <h3 className="text-lg font-medium mb-2 text-white">Image Loader Tester</h3>
+          {products.map((product) => (
+            <img 
+              key={`test-${product.id}`}
+              src={product.imageUrl} 
+              alt={product.name}
+              className="w-0 h-0"
+              onLoad={() => console.log(`✅ Successfully loaded: ${product.imageUrl}`)}
+              onError={() => console.error(`❌ Failed to load: ${product.imageUrl}`)}
+            />
+          ))}
+        </div>
+      )}
+      {showProductModal && <ProductModal />}
     </div>
   );
 };
