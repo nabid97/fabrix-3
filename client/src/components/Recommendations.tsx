@@ -3,9 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { Recommendation, fetchRecommendations } from '../api/recommendationsApi';
 import LoadingSpinner from './common/LoadingSpinner';
 import ClothingCard from './product/ClothingCard';
+import { ClothingProduct } from '../types/product';
 
 const S3_BUCKET_URL = 'https://fabrix-assets.s3.us-east-1.amazonaws.com';
-const DEFAULT_PLACEHOLDER = `${S3_BUCKET_URL}/placeholders/no-image.jpg`;
+const DEFAULT_PLACEHOLDER = `${S3_BUCKET_URL}/clothing/clothing-fallback.png`;
+
+// Add this function to fix image URLs
+const getCorrectImageUrl = (product: Recommendation): string => {
+  if (!product || !product.name) {
+    return DEFAULT_PLACEHOLDER;
+  }
+  
+  // If the URL is missing or incorrect, replace with the correct file name
+  const productNameMap: Record<string, string> = {
+    'Premium Polo Shirt': 'premium-polo-shirt.jpg',
+    'Branded Hoodie': 'pullover-hoodie.jpg',
+    'Performance Vest': 'performance-vest.jpg',
+    'Business Oxford Shirt': 'business-shirt.jpg',
+    'Custom T-Shirt': 'classic-tshirt.jpg',
+    'Quarter-Zip Pullover': 'quarter-zip-pullover.jpg',
+    'Corporate Softshell Jacket': 'softshell-jacket.jpg',
+    'Embroidered Cap': 'structured-cap.jpg',
+  };
+  
+  // Find the correct filename for this product
+  const filename = productNameMap[product.name] || 
+                  product.name.toLowerCase().replace(/\s+/g, '-') + '.jpg';
+  
+  return `${S3_BUCKET_URL}/clothing/${filename}`;
+};
 
 const Recommendations: React.FC = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -19,19 +45,7 @@ const Recommendations: React.FC = () => {
         setLoading(true);
         const data = await fetchRecommendations();
         console.log('Received recommendations:', data);
-        
-        // Transform the data to ensure image URLs exist and are valid
-        const transformedData = data.map(item => {
-          // If the item doesn't have an imageUrl or it's invalid
-          if (!item.imageUrl) {
-            // Create image URL based on product name
-            const productName = item.name.toLowerCase().replace(/\s+/g, '-');
-            item.imageUrl = `${S3_BUCKET_URL}/clothing/${productName}.jpg`;
-          }
-          return item;
-        });
-        
-        setRecommendations(transformedData);
+        setRecommendations(data);
         setError(null);
       } catch (err) {
         console.error('Error loading recommendations:', err);
@@ -66,30 +80,23 @@ const Recommendations: React.FC = () => {
             <ClothingCard
               key={product.id}
               product={{
-                ...product,
-                type: 'clothing' as 'clothing', // Explicitly cast type to 'clothing' literal
-                fabricOptions: ['Cotton', 'Polyester'],
-                minOrderQuantity: 1,
-                gender: Array.isArray(product.gender) ? product.gender : ['Unisex'],
+                id: product.id,
+                name: product.name,
                 description: product.description || '',
+                imageUrl: getCorrectImageUrl(product),
+                images: [getCorrectImageUrl(product)],
+                price: product.price,
+                // Add all required properties for ClothingProduct
                 basePrice: product.price || 0,
-                availableColors: product.availableColors || [],
-                availableSizes: product.availableSizes || [],
-                imageUrl: product.imageUrl || DEFAULT_PLACEHOLDER, // Ensure imageUrl is always a string
+                availableSizes: product.availableSizes || ['S', 'M', 'L'],
+                availableColors: product.availableColors || ['Black', 'White'],
+                fabricOptions: ['Cotton', 'Polyester'],
+                // Add additional required properties
+                type: 'clothing',
+                minOrderQuantity: 25,
+                gender: Array.isArray(product.gender) ? product.gender : ['unisex']
               }}
               onClick={() => handleProductClick(product)}
-              filteredProducts={recommendations.map(product => ({
-                ...product,
-                type: 'clothing',
-                fabricOptions: ['Cotton', 'Polyester'],
-                minOrderQuantity: 1,
-                basePrice: product.price || 0,
-                availableColors: product.availableColors || [],
-                availableSizes: product.availableSizes || [],
-                imageUrl: product.imageUrl || DEFAULT_PLACEHOLDER,
-                gender: product.gender || ['Unisex'], // Ensure gender is always a string[]
-              }))} // Transform recommendations to match ClothingProduct[]
-              navigateToProduct={handleProductClick} // Pass the handleProductClick function
             />
           ))}
         </div>

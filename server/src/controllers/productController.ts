@@ -31,6 +31,17 @@ const getCorrectImageUrl = (productName: string, imageUrl?: string): string => {
   return `https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/${filename}`;
 };
 
+// Add this helper function to sanitize URLs before saving to database
+const sanitizeS3Url = (url: string): string => {
+  if (!url) return '';
+  
+  // Clean any malformed URLs
+  return url
+    .replace(/^https:\/\/https:\/\//, 'https://')
+    .replace(/\.s3\.us-east-1\.amazonaws\.com\.s3\.us-east-1\.amazonaws\.com/, 
+            '.s3.us-east-1.amazonaws.com');
+};
+
 // @desc    Fetch all products
 // @route   GET /api/products
 // @access  Public
@@ -183,6 +194,25 @@ export const createFabricProduct = asyncHandler(async (req: Request, res: Respon
   res.status(201).json(product);
 });
 
+// Use this function before saving products
+export const createProduct = async (req: Request, res: Response) => {
+  try {
+    // Clean URLs before saving
+    if (req.body.imageUrl) {
+      req.body.imageUrl = sanitizeS3Url(req.body.imageUrl);
+    }
+    
+    if (req.body.images && Array.isArray(req.body.images)) {
+      req.body.images = req.body.images.map(sanitizeS3Url);
+    }
+    
+    // Rest of your create product logic
+    // ...
+  } catch (error) {
+    // Error handling
+  }
+};
+
 // @desc    Update a product
 // @route   PUT /api/products/:id
 // @access  Private/Admin
@@ -227,37 +257,42 @@ export const getClothingProducts = async (req: Request, res: Response) => {
   try {
     const products = await ClothingProduct.find({ isActive: true });
     
-    // Transform products to ensure they have an imageUrl field
+    // Transform products to ensure they have correct imageUrl
     const transformedProducts = products.map(product => {
-      const productObj = product.toObject ? product.toObject() : product;
+      const productObj = product.toObject();
       
-      // If product already has images array, use the first image as imageUrl
-      if (productObj.images && productObj.images.length > 0) {
-        return {
-          ...productObj,
-          imageUrl: productObj.images[0] // Set imageUrl from first image in array
-        };
+      // Clean up malformed URLs
+      const cleanImageUrl = (url: string): string => {
+        if (!url) return '';
+        
+        // Fix double protocol
+        let cleanUrl = url.replace(/^https:\/\/https:\/\//, 'https://');
+        
+        // Fix duplicate domains
+        cleanUrl = cleanUrl.replace(
+          /\.s3\.us-east-1\.amazonaws\.com\.s3\.us-east-1\.amazonaws\.com/, 
+          '.s3.us-east-1.amazonaws.com'
+        );
+        
+        return cleanUrl;
+      };
+
+      // If imageUrl doesn't exist or is a placeholder, use the first image from images array
+      if (!productObj.imageUrl || productObj.imageUrl.includes('placeholder')) {
+        if (productObj.images && productObj.images.length > 0) {
+          productObj.imageUrl = cleanImageUrl(productObj.images[0]);
+        }
+      } else {
+        // Clean the existing imageUrl if present
+        productObj.imageUrl = cleanImageUrl(productObj.imageUrl);
       }
       
-      // Otherwise use filename mapping
-      const imageMap: Record<string, string> = {
-        'Premium Polo Shirt': 'premium-polo-shirt.jpg',
-        'Business Oxford Shirt': 'business-shirt.jpg',
-        'Custom T-Shirt': 'classic-tshirt.jpg',
-        'Quarter-Zip Pullover': 'quarter-zip-pullover.jpg',
-        'Corporate Softshell Jacket': 'softshell-jacket.jpg',
-        'Embroidered Cap': 'structured-cap.jpg',
-        'Branded Hoodie': 'pullover-hoodie.jpg',
-        'Performance Vest': 'performance-vest.jpg'
-      };
+      // Always clean URLs in the images array
+      if (productObj.images && Array.isArray(productObj.images)) {
+        productObj.images = productObj.images.map(cleanImageUrl);
+      }
       
-      const filename = imageMap[productObj.name] || 
-        productObj.name.toLowerCase().replace(/\s+/g, '-') + '.jpg';
-      
-      return {
-        ...productObj,
-        imageUrl: `https://fabrix-assets.s3.us-east-1.amazonaws.com/clothing/${filename}`
-      };
+      return productObj;
     });
     
     res.json(transformedProducts);

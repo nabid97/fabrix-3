@@ -121,16 +121,36 @@ const OrderConfirmationPage: React.FC = () => {
     
   }, [orderNumber, location.state]);
 
+  // Add this function near the top of your component or at file level
+  const sanitizeUrl = (url: string): string => {
+    if (!url) return "https://fabrix-assets.s3.us-east-1.amazonaws.com/placeholders/no-image.jpg";
+    
+    let cleanUrl = url;
+    
+    // Fix double protocol
+    if (cleanUrl.startsWith('https://https://')) {
+      cleanUrl = cleanUrl.replace('https://https://', 'https://');
+    }
+    
+    // Fix duplicate domains
+    if (cleanUrl.includes('.s3.us-east-1.amazonaws.com.s3.us-east-1.amazonaws.com')) {
+      cleanUrl = cleanUrl.replace('.s3.us-east-1.amazonaws.com.s3.us-east-1.amazonaws.com', 
+                               '.s3.us-east-1.amazonaws.com');
+    }
+    
+    return cleanUrl;
+  };
+
   useEffect(() => {
     const fetchRecommendedProducts = async () => {
       try {
         // Either fetch from API or generate based on ordered items
         const data = await fetchRecommendations() || [];
         
-        // Ensure each product has valid imageUrl
-        const productsWithValidImages = data.map((product: { id: string; name: string; imageUrl?: string; images?: string[] }) => ({
+        // Ensure each product has valid imageUrl - Apply sanitization here
+        const productsWithValidImages = data.map((product: any) => ({
           ...product,
-          imageUrl: validateImageUrl(product.imageUrl || product.images?.[0] || '')
+          imageUrl: sanitizeUrl(product.imageUrl || product.images?.[0] || '')
         }));
         
         setRecommendedProducts(productsWithValidImages);
@@ -140,19 +160,6 @@ const OrderConfirmationPage: React.FC = () => {
       }
     };
     
-    // Helper to validate image URLs
-    const validateImageUrl = (url: string): string => {
-      if (!url) return "https://fabrix-assets.s3.us-east-1.amazonaws.com/placeholder.jpg";
-      
-      // If it's already a complete URL, return it as is
-      if (url.match(/^https?:\/\//)) {
-        return url;
-      }
-      
-      // Otherwise, prepend your base image URL
-      return `https://fabrix-assets.s3.us-east-1.amazonaws.com/${url}`;
-    };
-
     // Only fetch recommendations after order is loaded
     if (order) {
       fetchRecommendedProducts();
@@ -441,20 +448,15 @@ const OrderConfirmationPage: React.FC = () => {
             <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="h-48 overflow-hidden relative">
                 <img 
-                  src={product.imageUrl} 
+                  src={sanitizeUrl(product.imageUrl)} 
                   alt={product.name}
                   className="w-full h-full object-cover object-center"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    console.log(`Image failed to load: ${target.src}`);
+                    console.error(`Failed to load image: ${target.src}`);
                     
-                    // Try a fallback image if available
-                    if (product.images && product.images.length > 0) {
-                      target.src = product.images[0];
-                    } else {
-                      // Use a placeholder image as last resort
-                      target.src = "https://fabrix-assets.s3.us-east-1.amazonaws.com/placeholder.jpg";
-                    }
+                    // Use a placeholder image
+                    target.src = "https://fabrix-assets.s3.us-east-1.amazonaws.com/placeholders/no-image.jpg";
                     // Prevent infinite error loop
                     target.onerror = null;
                   }}
@@ -467,7 +469,7 @@ const OrderConfirmationPage: React.FC = () => {
                     (product.basePrice ? product.basePrice.toFixed(2) : '0.00')}
                 </p>
                 <button 
-                  onClick={() => navigate(`/product/${product.id}`)}
+                  onClick={() => navigate(`/${product.type || 'product'}/${product.id}`)}
                   className="mt-2 w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 transition-colors"
                 >
                   View Details
