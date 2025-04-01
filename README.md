@@ -291,7 +291,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📞 Contact
 
 - Project Link: [https://github.com/nabid97/fabrix](https://github.com/nabid97/fabrix)
-- Developer: [your-email@example.com](mailto:your-email@example.com)
+- Developer: [nabidhossain1997@gmail.com](mailto:nabidhossain1997@gmail.com)
 
 ## 🙏 Acknowledgements
 
